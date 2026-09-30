@@ -1,0 +1,486 @@
+/* ============================================================
+   Конфигуратор автомобиля — тёмная тема, 100dvh, без скролла
+   Порядок секций: 1) токены  2) reset  3) раскладка
+   4) схема (SVG)  5) панель  6) мобильный брейкпоинт
+   7) prefers-reduced-motion
+   ============================================================ */
+
+/* 1. ТОКЕНЫ --------------------------------------------------------- */
+:root {
+  --bg: #0b0b0c;
+  --surface: #141416;
+  --surface-2: #1c1c1f;
+  --line: #26262a;
+  --text: #ffffff;
+  --muted: #8a8a92;
+  --accent: #ff4d4d;
+  --accent-soft: rgba(255, 77, 77, .16);
+  --hover-fill: rgba(255, 255, 255, .05);
+}
+
+/* 2. RESET / БАЗА --------------------------------------------------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { height: 100%; }
+
+body {
+  margin: 0;
+  height: 100dvh;
+  overflow: hidden;                 /* строго 100dvh без вертикального скролла */
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* 3. РАСКЛАДКА ------------------------------------------------------ */
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vh, 20px);
+  padding: clamp(12px, 2vw, 28px);
+  min-height: 0;
+}
+
+/* Шапка: фиксированная высота, не сжимается */
+.app__header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.brand__mark {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.btn-reset {
+  flex: none;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .06em;
+  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+}
+
+.btn-reset:hover {
+  border-color: var(--muted);
+  color: var(--text);
+  background: var(--hover-fill);
+}
+
+.btn-reset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Основная область: две колонки. min-height:0 обязателен, иначе появится скролл */
+.app__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 420px);
+  gap: clamp(16px, 2vw, 32px);
+}
+
+/* 4. СХЕМА (SVG) ---------------------------------------------------- */
+.stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 1.6vw, 24px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.car {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+/* Неинтерактивный кузов — тонкие линии */
+#body .car__outline,
+#body .car__arch,
+#body .car__glass,
+#body .car__sill,
+#body .car__ground {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#body .car__outline { stroke: var(--muted); stroke-width: 1.6; opacity: .7; }
+#body .car__arch    { stroke: var(--muted); stroke-width: 1.4; opacity: .55; }
+#body .car__glass   { stroke: var(--muted); stroke-width: 1.2; opacity: .4; }
+#body .car__sill    { stroke: var(--muted); stroke-width: 1.2; opacity: .38; }
+#body .car__ground  { stroke: var(--line); stroke-width: 1.5; }
+
+/* Интерактивные модули.
+   Механизм подсветки: сама группа не красится (fill на g не работает для
+   потомков), а цвет задаётся CSS-переменной --module-fill, которую читает
+   невидимая hit-фигура .car__hit. В покое переменная = transparent, поэтому
+   зона клика невидима; на hover — мягкий серый; на .active — коралловый. */
+g.car__module {
+  --module-fill: transparent;
+  cursor: pointer;
+  stroke: var(--line);
+  transition: fill .22s ease, stroke .22s ease, transform .22s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+g.car__module:hover { --module-fill: var(--hover-fill); }
+
+g.car__module.active {
+  --module-fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+g.car__module:focus-visible {
+  outline: 2px solid var(--accent);   /* системный фокус, не гасим его */
+  outline-offset: 3px;
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+
+/* Зона клика: всегда кликабельна, цвет берёт из --module-fill группы.
+   fill-opacity: 1 — при transparent покой остаётся полностью невидимым,
+   но при hover/.active красится (работает и для path fill-rule="evenodd"
+   у колёс — «кольцо» с дыркой, и для circle у тормозов). */
+.car__hit {
+  fill: var(--module-fill, transparent);
+  fill-opacity: 1;
+  stroke: none;
+  pointer-events: all;
+  transition: fill .22s ease;
+}
+
+/* Видимая графика модуля */
+.car__module .car__part {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke .22s ease;
+}
+
+.car__module:hover .car__part { stroke: var(--text); }
+.car__module.active .car__part { stroke: var(--accent); }
+.car__module:focus-visible .car__part { stroke: var(--accent); }
+
+#wheels .car__part circle { stroke-width: 1.6; }
+#wheels .car__part > circle:nth-child(-n+2) { stroke-width: 5; } /* покрышка */
+
+.stage__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(8px, 1.4vh, 16px);
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  opacity: .7;
+  pointer-events: none;
+}
+
+/* 5. ПАНЕЛЬ --------------------------------------------------------- */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* На десктопе шапка аккордеона скрыта */
+.panel__head { display: none; flex: none; }
+
+.accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.accordion-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Стрелка-шеврон */
+.accordion-toggle__icon {
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform .25s ease;
+}
+
+.accordion-toggle[aria-expanded="false"] .accordion-toggle__icon {
+  transform: rotate(-135deg);
+}
+
+.panel__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* первая строка тянется, остальные — по содержимому: страховка от переполнения */
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: clamp(10px, 1.6vh, 18px);
+  overflow: hidden;
+}
+
+/* --- карточки модулей --- */
+.modules {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: clamp(6px, 1vh, 12px);
+}
+
+.module {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--line);
+  border-radius: 12px;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+
+.module.active {
+  border-color: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.module__title {
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color .2s ease;
+}
+
+.module.active .module__title { color: var(--text); }
+
+.module__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+/* --- кнопки вариантов (рисует JS) --- */
+.option {
+  min-width: 0;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+}
+
+.option:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.option.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- характеристики: очень тонкие линии --- */
+.stats {
+  flex: none;
+  display: grid;
+  gap: clamp(6px, 1vh, 10px);
+}
+
+.stat {
+  display: grid;
+  gap: 5px;
+}
+
+.stat__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stat__label {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stat__value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat__track {
+  height: 2px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat__bar {
+  height: 100%;
+  width: 0;                       /* ширину ставит JS */
+  background: var(--accent);
+  transition: width .45s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* --- итог --- */
+.summary {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: clamp(6px, 1vh, 12px);
+  border-top: 1px solid var(--line);
+}
+
+.summary__label {
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.summary__value {
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* 6. МОБИЛЬНЫЙ БРЕЙКПОИНТ < 900px ----------------------------------- */
+@media (max-width: 900px) {
+  .app__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);
+  }
+
+  .stage { padding: 8px; }
+  .stage__hint { bottom: 6px; font-size: 10px; }
+
+  /* Шапка аккордеона появляется только здесь */
+  .panel__head { display: block; }
+
+  /* Свёрнутое состояние: кнопка переключает aria-expanded */
+  .panel__head:has(#accordionToggle[aria-expanded="false"]) + .panel__body,
+  .panel__body[hidden] {
+    display: none;
+  }
+
+  /* Осознанное исключение из «без скролла»: на 360×640
+     4 карточки + 4 метрики физически не влезают — нужен внутренний скролл */
+  .panel__body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Строки по содержимому: minmax(0, auto) позволял карточке сжаться
+     ниже высоты кнопок, и кнопки вариантов наезжали на следующую
+     карточку (на 360×640 карточка была 32.9px при кнопке 33.4px). */
+  .modules {
+    grid-template-rows: none;
+    grid-auto-rows: min-content;
+  }
+
+  /* min-height: min-content перекрывает десктопное `.module { min-height: 0 }`,
+     поэтому высота карточки всегда покрывает содержимое. */
+  .module {
+    grid-template-columns: 88px minmax(0, 1fr);
+    min-height: min-content;
+  }
+}
+
+/* Очень узкие экраны */
+@media (max-width: 420px) {
+  .brand { font-size: 10px; letter-spacing: .1em; }
+  .module { grid-template-columns: 74px minmax(0, 1fr); }
+  .option { font-size: 11px; padding: 8px 4px; }
+}
+
+/* 7. ПРОДВИЖЕНИЕ ОТКЛЮЧЕНО ----------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    transition-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+}

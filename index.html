@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Конфигуратор автомобиля</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <div class="brand"><span class="brand__mark"></span> CONFIGURATOR / XDRIVE</div>
+      <button class="btn-reset" id="resetBtn" type="button">Сбросить</button>
+    </header>
+
+    <main class="app__body">
+      <!-- ЛЕВАЯ ЗОНА: схема автомобиля -->
+      <section class="stage" aria-label="Схема автомобиля">
+        <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Интерактивная схема автомобиля, вид сбоку">
+          <!-- НЕИНТЕРАКТИВНЫЙ КУЗОВ: контуры, стекло, порог/подвеска, земля -->
+          <g id="body" aria-hidden="true">
+            <path class="car__ground" d="M 60 350 L 740 350" fill="none" />
+            <path class="car__outline" d="M 90 272 L 90 228 L 118 208 L 300 192 L 366 116 L 486 116 L 560 194 L 672 198 L 706 232 L 712 272 Z" fill="none" />
+            <path class="car__arch" d="M 168 272 A 72 72 0 0 1 312 272" fill="none" />
+            <path class="car__arch" d="M 528 272 A 72 72 0 0 1 672 272" fill="none" />
+            <path class="car__glass" d="M 312 196 L 372 126 L 480 126 L 552 194" fill="none" />
+            <path class="car__glass" d="M 426 126 L 426 194" fill="none" />
+            <path class="car__sill" d="M 104 288 L 178 288" fill="none" />
+            <path class="car__sill" d="M 314 288 L 524 288" fill="none" />
+            <path class="car__sill" d="M 662 288 L 696 288" fill="none" />
+          </g>
+
+          <!-- 1. ДВИГАТЕЛЬ: моторный отсек, перед-низ слева (x 94–164, y 200–270) -->
+          <g id="engine" class="car__module" data-module="engine" tabindex="0" role="button" aria-label="Двигатель">
+            <rect class="car__hit" x="94" y="200" width="70" height="70" />
+            <g class="car__part">
+              <rect x="98" y="206" width="60" height="58" rx="5" fill="none" />
+              <path d="M 106 216 L 150 216" fill="none" />
+              <path d="M 106 228 L 150 228" fill="none" />
+              <path d="M 106 240 L 150 240" fill="none" />
+              <circle cx="128" cy="254" r="7" fill="none" />
+            </g>
+          </g>
+
+          <!-- 2. ПОДВЕСКА: рычаги у колёс и пружины между колёсами снизу (x 296–514, y 282–342) -->
+          <g id="suspension" class="car__module" data-module="suspension" tabindex="0" role="button" aria-label="Подвеска">
+            <rect class="car__hit" x="296" y="282" width="218" height="60" />
+            <g class="car__part">
+              <path d="M 302 290 L 332 300 L 302 310" fill="none" />
+              <path d="M 302 322 L 332 300" fill="none" />
+              <path d="M 508 290 L 478 300 L 508 310" fill="none" />
+              <path d="M 508 322 L 478 300" fill="none" />
+              <path d="M 332 300 L 478 300" fill="none" />
+              <path d="M 392 288 L 384 296 L 400 304 L 384 312 L 400 320 L 384 328 L 392 334" fill="none" />
+              <path d="M 452 288 L 444 296 L 460 304 L 444 312 L 460 320 L 444 328 L 452 334" fill="none" />
+            </g>
+          </g>
+
+          <!-- 3. КОЛЁСА: оба колеса, окружности со спицами.
+               hit — ПОЛНЫЙ диск r 54 на каждое колесо, без дырки в центре:
+               центр-ступица (r < 15) кликабельна как «Колёса», а зона
+               диска перекрывается кольцом #brakes (оно ниже в DOM). -->
+          <g id="wheels" class="car__module" data-module="wheels" tabindex="0" role="button" aria-label="Колёса">
+            <circle class="car__hit" cx="240" cy="296" r="54" />
+            <circle class="car__hit" cx="600" cy="296" r="54" />
+            <g class="car__part">
+              <circle cx="240" cy="296" r="54" fill="none" />
+              <circle cx="600" cy="296" r="54" fill="none" />
+              <circle cx="240" cy="296" r="32" fill="none" />
+              <circle cx="600" cy="296" r="32" fill="none" />
+              <circle cx="240" cy="296" r="9" fill="none" />
+              <circle cx="600" cy="296" r="9" fill="none" />
+              <path d="M 250 296 L 270 296 M 243 306 L 249 325 M 232 302 L 216 314 M 232 290 L 216 278 M 243 286 L 249 267" fill="none" />
+              <path d="M 610 296 L 630 296 M 603 306 L 609 325 M 592 302 L 576 314 M 592 290 L 576 278 M 603 286 L 609 267" fill="none" />
+            </g>
+          </g>
+
+          <!-- 4. ТОРМОЗА: диски и суппорты у обоих колёс.
+               hit — кольцо fill-rule="evenodd" вокруг центра: внешний r 27
+               (накрывает нарисованный диск r 25 и пальцы суппорта),
+               внутренний r 15 (оставляет ступицу и спицы за «Колёсами»).
+               Итоговые зоны: r < 15 → колёса, 15…27 → тормоза, r > 27 → колёса. -->
+          <g id="brakes" class="car__module" data-module="brakes" tabindex="0" role="button" aria-label="Тормоза">
+            <path class="car__hit" fill-rule="evenodd"
+                  d="M 213 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 225 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
+            <path class="car__hit" fill-rule="evenodd"
+                  d="M 573 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 585 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
+            <g class="car__part">
+              <circle cx="240" cy="296" r="25" fill="none" />
+              <circle cx="600" cy="296" r="25" fill="none" />
+              <circle cx="240" cy="296" r="11" fill="none" />
+              <circle cx="600" cy="296" r="11" fill="none" />
+              <path d="M 218 283 L 236 271 M 222 290 L 240 278" fill="none" />
+              <path d="M 578 283 L 596 271 M 582 290 L 600 278" fill="none" />
+            </g>
+          </g>
+        </svg>
+        <div class="stage__hint">Нажмите на узел схемы, чтобы перейти к его настройке</div>
+      </section>
+
+      <!-- ПРАВАЯ ЗОНА: панель тюнинга -->
+      <section class="panel" id="panel" aria-label="Панель тюнинга">
+        <div class="panel__head">
+          <button class="accordion-toggle" id="accordionToggle" type="button" aria-expanded="true" aria-controls="panelBody">
+            <span class="accordion-toggle__label">Настройка</span>
+            <span class="accordion-toggle__icon" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="panel__body" id="panelBody">
+          <div class="modules" id="modules"><!-- 4 .module генерируются из PartsDB в JS --></div>
+          <div class="stats" id="stats"><!-- 4 .stat генерируются из METRICS в JS --></div>
+          <footer class="summary">
+            <div class="summary__label">Итого</div>
+            <div class="summary__value" id="totalPrice">0 ₽</div>
+          </footer>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
