@@ -1,8 +1,9 @@
 /* ============================================================
    Конфигуратор автомобиля — тёмная тема, 100dvh, без скролла
    Порядок секций: 1) токены  2) reset  3) раскладка
-   4) схема (SVG)  5) панель  6) мобильный брейкпоинт
-   7) prefers-reduced-motion
+   4) шапка и селектор моделей  5) схема (SVG)  6) панель и вкладки
+   7) карточки запчастей  8) метрики, дисплей, уведомления
+   9) мобильный брейкпоинт  10) prefers-reduced-motion
    ============================================================ */
 
 /* 1. ТОКЕНЫ --------------------------------------------------------- */
@@ -16,6 +17,9 @@
   --accent: #ff4d4d;
   --accent-soft: rgba(255, 77, 77, .16);
   --hover-fill: rgba(255, 255, 255, .05);
+  /* Единственный дополнительный оттенок — зелёный для падения цены */
+  --good: #4fd18b;
+  --good-soft: rgba(79, 209, 139, .14);
 }
 
 /* 2. RESET / БАЗА --------------------------------------------------- */
@@ -45,6 +49,12 @@ button {
   cursor: pointer;
 }
 
+/* JS прячет несовместимые категории, пустые вкладки и свободные слоты
+   уведомлений через атрибут hidden. Без этого правила авторский
+   `display: grid` у .module перебил бы user-agent стиль [hidden] { display: none }
+   и «скрытые» карточки продолжали бы занимать место в панели. */
+[hidden] { display: none !important; }
+
 /* 3. РАСКЛАДКА ------------------------------------------------------ */
 .app {
   height: 100dvh;
@@ -58,10 +68,10 @@ button {
 /* Шапка: фиксированная высота, не сжимается */
 .app__header {
   flex: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: clamp(10px, 1.6vw, 22px);
 }
 
 .brand {
@@ -80,6 +90,106 @@ button {
   height: 9px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+/* --- 4. СЕЛЕКТОР МОДЕЛЕЙ + ЖИВОЙ КУРС --- */
+.models {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.model {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.model:hover { color: var(--text); background: var(--hover-fill); }
+
+.model.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.model:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.model__platform {
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model.is-active .model__platform { color: var(--accent); }
+
+.model__name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.model.is-active .model__name { color: var(--text); }
+
+.model__specs {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: .75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Индикатор живого API: точка + текущий курс */
+.market-pulse {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.market-pulse__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--good);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: .35; transform: scale(.8); }
+  50%      { opacity: 1;   transform: scale(1); }
 }
 
 .btn-reset {
@@ -272,27 +382,63 @@ g.car__module:focus-visible {
   flex: 1;
   min-height: 0;
   display: grid;
-  /* первая строка тянется, остальные — по содержимому: страховка от переполнения */
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  gap: clamp(10px, 1.6vh, 18px);
+  /* шапка вкладок тянется, остальное — по содержимому */
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  gap: clamp(8px, 1.2vh, 14px);
   overflow: hidden;
 }
 
-/* --- карточки модулей --- */
+/* --- 6a. ИНЖЕНЕРНЫЕ ВКЛАДКИ --- */
+.tabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  flex: 1 0 auto;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.tab:hover { color: var(--text); background: var(--hover-fill); }
+
+.tab.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* --- 6b. КАРТОЧКИ ЗАПЧАСТЕЙ --- */
 .modules {
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
-  gap: clamp(6px, 1vh, 12px);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: clamp(5px, .8vh, 10px);
 }
 
 .module {
   min-height: 0;
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-left: 2px solid var(--line);
@@ -306,38 +452,54 @@ g.car__module:focus-visible {
 }
 
 .module__title {
-  font-size: 12px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.module__label {
+  font-size: 11px;
+  letter-spacing: .02em;
   color: var(--muted);
   transition: color .2s ease;
 }
 
-.module.active .module__title { color: var(--text); }
+.module.active .module__label { color: var(--text); }
+
+/* Бренд и артикул выбранной позиции */
+.module__meta {
+  font-size: 9px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  opacity: .6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .module__options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
 /* --- кнопки вариантов (рисует JS) --- */
 .option {
   min-width: 0;
-  padding: 8px 6px;
+  display: grid;
+  gap: 1px;
+  padding: 6px 7px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: left;
   transition: border-color .2s ease, color .2s ease, background-color .2s ease;
 }
 
-.option:hover {
+.option:hover:not(:disabled) {
   border-color: var(--muted);
   color: var(--text);
 }
@@ -353,11 +515,97 @@ g.car__module:focus-visible {
   outline-offset: 2px;
 }
 
-/* --- характеристики: очень тонкие линии --- */
+.option__label {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option__brand {
+  font-size: 9px;
+  letter-spacing: .03em;
+  opacity: .65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option__price {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color .35s ease;
+}
+
+/* Позиция снята с продажи: выбор физически заблокирован */
+.option.is-oos {
+  opacity: .45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.option.is-oos .option__price {
+  color: var(--accent);
+  letter-spacing: .02em;
+}
+
+/* Акция: цена подсвечена зелёным и остаётся такой, пока акция жива */
+.option__price.is-sale { color: var(--good); }
+
+/* Одноразовая подсветка падения цены между тиками */
+.option__price.is-drop { animation: priceDrop 1.3s ease-out; }
+
+@keyframes priceDrop {
+  0%   { color: var(--good); text-shadow: 0 0 0 var(--good); }
+  40%  { color: var(--good); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+/* --- 8. ДИСПЛЕЙ ФИЗИКИ + МЕТРИКИ --- */
+.dyno {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 7px 0 2px;
+  border-top: 1px solid var(--line);
+}
+
+.dyno__cell {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  text-align: center;
+}
+
+.dyno__label {
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dyno__value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* Пробуксовка: разгон подсвечен акцентом */
+.dyno.is-spin .dyno__cell:first-child .dyno__value { color: var(--accent); }
+
 .stats {
   flex: none;
   display: grid;
-  gap: clamp(6px, 1vh, 10px);
+  gap: clamp(5px, .8vh, 9px);
 }
 
 .stat {
@@ -399,6 +647,35 @@ g.car__module:focus-visible {
   transition: width .45s cubic-bezier(.4, 0, .2, 1);
 }
 
+/* --- лёгкие уведомления о конфликтах под метриками --- */
+.notices {
+  flex: none;
+  display: grid;
+  gap: 4px;
+}
+
+.notices.is-empty { display: none; }
+
+.notice {
+  padding: 5px 9px;
+  border-left: 2px solid var(--line);
+  border-radius: 0 7px 7px 0;
+  background: var(--surface);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--muted);
+  animation: noticeIn .3s ease-out;
+}
+
+.notice--error { border-left-color: var(--accent); color: #d9c3c3; }
+.notice--warn  { border-left-color: var(--muted); }
+.notice--more  { border-left-color: var(--line); opacity: .7; font-style: italic; }
+
+@keyframes noticeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* --- итог --- */
 .summary {
   flex: none;
@@ -417,6 +694,15 @@ g.car__module:focus-visible {
   color: var(--muted);
 }
 
+.summary__rub {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-transform: none;
+  opacity: .7;
+  font-variant-numeric: tabular-nums;
+}
+
 .summary__value {
   font-size: clamp(18px, 2.2vw, 24px);
   font-weight: 600;
@@ -424,11 +710,23 @@ g.car__module:focus-visible {
   color: var(--text);
 }
 
-/* 6. МОБИЛЬНЫЙ БРЕЙКПОИНТ < 900px ----------------------------------- */
+/* 9. МОБИЛЬНЫЙ БРЕЙКПОИНТ < 900px ----------------------------------- */
 @media (max-width: 900px) {
+  .app__header {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand  tools"
+      "models models";
+    row-gap: 8px;
+  }
+
+  .brand { grid-area: brand; }
+  .header-tools { grid-area: tools; }
+  .models { grid-area: models; }
+
   .app__body {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);
+    grid-template-rows: minmax(140px, 30%) minmax(0, 1fr);
   }
 
   .stage { padding: 8px; }
@@ -443,37 +741,40 @@ g.car__module:focus-visible {
     display: none;
   }
 
-  /* Осознанное исключение из «без скролла»: на 360×640
-     4 карточки + 4 метрики физически не влезают — нужен внутренний скролл */
+  /* Осознанное исключение из «без скролла»: вкладка может содержать
+     4 категории, плюс метрики и уведомления — нужен внутренний скролл */
   .panel__body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Строки по содержимому: minmax(0, auto) позволял карточке сжаться
-     ниже высоты кнопок, и кнопки вариантов наезжали на следующую
-     карточку (на 360×640 карточка была 32.9px при кнопке 33.4px). */
+  /* Строки по содержимому: карточка всегда покрывает содержимое */
   .modules {
-    grid-template-rows: none;
     grid-auto-rows: min-content;
   }
 
-  /* min-height: min-content перекрывает десктопное `.module { min-height: 0 }`,
-     поэтому высота карточки всегда покрывает содержимое. */
   .module {
-    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-columns: minmax(84px, 32%) minmax(0, 1fr);
     min-height: min-content;
   }
+
+  .tab { padding: 7px 9px; }
 }
 
 /* Очень узкие экраны */
-@media (max-width: 420px) {
+@media (max-width: 620px) {
   .brand { font-size: 10px; letter-spacing: .1em; }
-  .module { grid-template-columns: 74px minmax(0, 1fr); }
-  .option { font-size: 11px; padding: 8px 4px; }
+  .market-pulse { display: none; }
+  .model { padding: 5px 7px; }
+  .model__specs { display: none; }
+  .module { grid-template-columns: minmax(70px, 30%) minmax(0, 1fr); }
+  .option { padding: 6px 5px; }
+  .option__label { font-size: 10px; }
+  .option__brand { display: none; }
+  .dyno__value { font-size: 11px; }
 }
 
-/* 7. ПРОДВИЖЕНИЕ ОТКЛЮЧЕНО ----------------------------------------- */
+/* 10. ПРОДВИЖЕНИЕ ОТКЛЮЧЕНО ----------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

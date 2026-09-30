@@ -11,13 +11,21 @@
   <div class="app">
     <header class="app__header">
       <div class="brand"><span class="brand__mark"></span> CONFIGURATOR / XDRIVE</div>
-      <button class="btn-reset" id="resetBtn" type="button">Сбросить</button>
+      <nav class="models" id="models" aria-label="Выбор модели автомобиля"><!-- 3 .model генерируются из MODELS в JS --></nav>
+      <div class="header-tools">
+        <span class="market-pulse" id="marketPulse" title="Живой курс и статус рынка">
+          <span class="market-pulse__dot" aria-hidden="true"></span>
+          <span class="market-pulse__rate" id="marketRate">—</span>
+        </span>
+        <button class="btn-reset" id="resetBtn" type="button">Сбросить</button>
+      </div>
     </header>
 
     <main class="app__body">
       <!-- ЛЕВАЯ ЗОНА: схема автомобиля -->
       <section class="stage" aria-label="Схема автомобиля">
         <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Интерактивная схема автомобиля, вид сбоку">
+          <title>Интерактивная схема автомобиля, вид сбоку</title>
           <!-- НЕИНТЕРАКТИВНЫЙ КУЗОВ: контуры, стекло, порог/подвеска, земля -->
           <g id="body" aria-hidden="true">
             <path class="car__ground" d="M 60 350 L 740 350" fill="none" />
@@ -31,20 +39,67 @@
             <path class="car__sill" d="M 662 288 L 696 288" fill="none" />
           </g>
 
-          <!-- 1. ДВИГАТЕЛЬ: моторный отсек, перед-низ слева (x 94–164, y 200–270) -->
-          <g id="engine" class="car__module" data-module="engine" tabindex="0" role="button" aria-label="Двигатель">
-            <rect class="car__hit" x="94" y="200" width="70" height="70" />
+          <!-- ЗОНЫ СХЕМЫ. Каждая зона = data-zone + data-tabs (через запятую).
+               Клик по зоне открывает только перечисленные табы правой панели.
+               Взаимного перекрытия хит-зон нет: engine/boost/fuel/drive занимают
+               полосу под линией подоконника (y 198–268) по порядку слева направо,
+               suspension/brakes/wheels — под днищем и в колёсах, aero — на крышке багажника.
+               Порядок в DOM совпадает с визуальным: диски #brakes лежат выше #wheels,
+               поэтому кольцо 15…27 px кликается как «Тормоза», остальное — как «Колёса». -->
+
+          <!-- Z1. ДВИГАТЕЛЬ: моторный отсек (x 96–162) -->
+          <g id="engine" class="car__module" data-zone="engine" data-tabs="engine" tabindex="0" role="button" aria-label="Двигатель">
+            <rect class="car__hit" x="96" y="198" width="66" height="70" />
             <g class="car__part">
-              <rect x="98" y="206" width="60" height="58" rx="5" fill="none" />
-              <path d="M 106 216 L 150 216" fill="none" />
-              <path d="M 106 228 L 150 228" fill="none" />
-              <path d="M 106 240 L 150 240" fill="none" />
-              <circle cx="128" cy="254" r="7" fill="none" />
+              <rect x="100" y="204" width="58" height="58" rx="5" fill="none" />
+              <path d="M 108 214 L 150 214" fill="none" />
+              <path d="M 108 226 L 150 226" fill="none" />
+              <path d="M 108 238 L 150 238" fill="none" />
+              <circle cx="129" cy="252" r="7" fill="none" />
             </g>
           </g>
 
-          <!-- 2. ПОДВЕСКА: рычаги у колёс и пружины между колёсами снизу (x 296–514, y 282–342) -->
-          <g id="suspension" class="car__module" data-module="suspension" tabindex="0" role="button" aria-label="Подвеска">
+          <!-- Z2. НАДДУВ И ОХЛАЖДЕНИЕ: турбина + интеркулер (x 168–262) -->
+          <g id="boost" class="car__module" data-zone="boost" data-tabs="boost" tabindex="0" role="button" aria-label="Наддув и охлаждение">
+            <rect class="car__hit" x="168" y="198" width="94" height="70" />
+            <g class="car__part">
+              <circle cx="196" cy="226" r="17" fill="none" />
+              <circle cx="196" cy="226" r="7" fill="none" />
+              <path d="M 196 209 L 196 217 M 213 226 L 205 226 M 196 243 L 196 235 M 179 226 L 187 226" fill="none" />
+              <path d="M 213 226 L 232 226 L 232 240" fill="none" />
+              <rect x="214" y="244" width="40" height="18" rx="3" fill="none" />
+              <path d="M 222 244 L 222 262 M 234 244 L 234 262 M 246 244 L 246 262" fill="none" />
+            </g>
+          </g>
+
+          <!-- Z3. ТОПЛИВО И ОГОНЬ: форсунки, насос, выхлопной коллектор (x 268–360) -->
+          <g id="fuel" class="car__module" data-zone="fuel" data-tabs="fuel" tabindex="0" role="button" aria-label="Топливо и система зажигания">
+            <rect class="car__hit" x="268" y="198" width="92" height="70" />
+            <g class="car__part">
+              <path d="M 278 212 L 350 212" fill="none" />
+              <path d="M 288 212 L 288 224 M 306 212 L 306 224 M 324 212 L 324 224 M 342 212 L 342 224" fill="none" />
+              <rect x="280" y="230" width="20" height="30" rx="3" fill="none" />
+              <path d="M 310 236 L 348 236 M 310 248 L 348 248 M 310 260 L 348 260" fill="none" />
+              <circle cx="290" cy="245" r="3" fill="none" />
+            </g>
+          </g>
+
+          <!-- Z4. ТРАНСМИССИЯ: КПП, кардан, дифференциал (x 366–470) -->
+          <g id="drive" class="car__module" data-zone="drive" data-tabs="drive" tabindex="0" role="button" aria-label="Трансмиссия">
+            <rect class="car__hit" x="366" y="198" width="104" height="70" />
+            <g class="car__part">
+              <rect x="372" y="206" width="44" height="42" rx="5" fill="none" />
+              <path d="M 380 216 L 408 216 M 380 226 L 408 226 M 380 236 L 408 236" fill="none" />
+              <path d="M 416 227 L 462 227" fill="none" />
+              <circle cx="440" cy="227" r="11" fill="none" />
+              <circle cx="440" cy="227" r="4" fill="none" />
+              <path d="M 462 227 L 462 256" fill="none" />
+              <path d="M 452 250 L 472 250" fill="none" />
+            </g>
+          </g>
+
+          <!-- Z5. ПОДВЕСКА: рычаги у колёс и стойки между колёсами (x 296–514, y 282–342) -->
+          <g id="suspension" class="car__module" data-zone="suspension" data-tabs="chassis" tabindex="0" role="button" aria-label="Подвеска">
             <rect class="car__hit" x="296" y="282" width="218" height="60" />
             <g class="car__part">
               <path d="M 302 290 L 332 300 L 302 310" fill="none" />
@@ -57,11 +112,24 @@
             </g>
           </g>
 
-          <!-- 3. КОЛЁСА: оба колеса, окружности со спицами.
-               hit — ПОЛНЫЙ диск r 54 на каждое колесо, без дырки в центре:
-               центр-ступица (r < 15) кликабельна как «Колёса», а зона
-               диска перекрывается кольцом #brakes (оно ниже в DOM). -->
-          <g id="wheels" class="car__module" data-module="wheels" tabindex="0" role="button" aria-label="Колёса">
+          <!-- Z6. ТОРМОЗА: кольцо 15…27 px вокруг центра каждого колеса -->
+          <g id="brakes" class="car__module" data-zone="brakes" data-tabs="chassis" tabindex="0" role="button" aria-label="Тормоза">
+            <path class="car__hit" fill-rule="evenodd"
+                  d="M 213 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 225 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
+            <path class="car__hit" fill-rule="evenodd"
+                  d="M 573 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 585 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
+            <g class="car__part">
+              <circle cx="240" cy="296" r="25" fill="none" />
+              <circle cx="600" cy="296" r="25" fill="none" />
+              <circle cx="240" cy="296" r="11" fill="none" />
+              <circle cx="600" cy="296" r="11" fill="none" />
+              <path d="M 218 283 L 236 271 M 222 290 L 240 278" fill="none" />
+              <path d="M 578 283 L 596 271 M 582 290 L 600 278" fill="none" />
+            </g>
+          </g>
+
+          <!-- Z7. КОЛЁСА И ШИНЫ: полный диск r 54, центр-ступица (r < 15) и покрышка (r > 27) -->
+          <g id="wheels" class="car__module" data-zone="wheels" data-tabs="aero" tabindex="0" role="button" aria-label="Колёса и шины">
             <circle class="car__hit" cx="240" cy="296" r="54" />
             <circle class="car__hit" cx="600" cy="296" r="54" />
             <g class="car__part">
@@ -76,27 +144,17 @@
             </g>
           </g>
 
-          <!-- 4. ТОРМОЗА: диски и суппорты у обоих колёс.
-               hit — кольцо fill-rule="evenodd" вокруг центра: внешний r 27
-               (накрывает нарисованный диск r 25 и пальцы суппорта),
-               внутренний r 15 (оставляет ступицу и спицы за «Колёсами»).
-               Итоговые зоны: r < 15 → колёса, 15…27 → тормоза, r > 27 → колёса. -->
-          <g id="brakes" class="car__module" data-module="brakes" tabindex="0" role="button" aria-label="Тормоза">
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 213 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 225 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 573 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 585 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
+          <!-- Z8. АЭРОДИНАМИКА: антикрыло на крышке багажника (x 600–704, y 176–196) -->
+          <g id="aero" class="car__module" data-zone="aero" data-tabs="aero" tabindex="0" role="button" aria-label="Аэродинамика">
+            <rect class="car__hit" x="600" y="176" width="104" height="22" />
             <g class="car__part">
-              <circle cx="240" cy="296" r="25" fill="none" />
-              <circle cx="600" cy="296" r="25" fill="none" />
-              <circle cx="240" cy="296" r="11" fill="none" />
-              <circle cx="600" cy="296" r="11" fill="none" />
-              <path d="M 218 283 L 236 271 M 222 290 L 240 278" fill="none" />
-              <path d="M 578 283 L 596 271 M 582 290 L 600 278" fill="none" />
+              <path d="M 606 184 L 698 180" fill="none" />
+              <path d="M 614 185 L 618 196 M 686 182 L 690 194" fill="none" />
+              <path d="M 630 196 C 648 188 668 186 682 194" fill="none" />
             </g>
           </g>
         </svg>
-        <div class="stage__hint">Нажмите на узел схемы, чтобы перейти к его настройке</div>
+        <div class="stage__hint" id="stageHint">Нажмите на узел схемы — откроются связанные вкладки</div>
       </section>
 
       <!-- ПРАВАЯ ЗОНА: панель тюнинга -->
@@ -108,11 +166,16 @@
           </button>
         </div>
         <div class="panel__body" id="panelBody">
-          <div class="modules" id="modules"><!-- 4 .module генерируются из PartsDB в JS --></div>
+          <div class="tabs" id="tabs" role="tablist" aria-label="Инженерные группы"><!-- 6 .tab генерируются из TABS в JS --></div>
+          <div class="modules" id="modules"><!-- .module генерируются из PartsDB в JS --></div>
+          <div class="dyno" id="dyno"><!-- 5 .dyno__cell: 0-100, Vmax, л.с., кг, Нм --></div>
           <div class="stats" id="stats"><!-- 4 .stat генерируются из METRICS в JS --></div>
+          <div class="notices" id="notices" role="status" aria-live="polite"><!-- .notice генерируются движком конфликтов --></div>
           <footer class="summary">
-            <div class="summary__label">Итого</div>
-            <div class="summary__value" id="totalPrice">0 ₽</div>
+            <div class="summary__label">Итого
+              <span class="summary__rub" id="totalRub"></span>
+            </div>
+            <div class="summary__value" id="totalPrice">$0</div>
           </footer>
         </div>
       </section>
