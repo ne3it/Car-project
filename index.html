@@ -10,92 +10,20 @@
 <body>
   <div class="app">
     <header class="app__header">
-      <div class="brand"><span class="brand__mark"></span> CONFIGURATOR / XDRIVE</div>
+      <div class="brand"><span class="brand__mark"></span><span class="brand__text">CONFIGURATOR / XDRIVE</span></div>
+      <div class="model-switch" id="modelSwitch" role="group" aria-label="Модель автомобиля"><!-- 3 .model-switch__btn генерируются из MODELS в JS --></div>
       <button class="btn-reset" id="resetBtn" type="button">Сбросить</button>
     </header>
 
     <main class="app__body">
-      <!-- ЛЕВАЯ ЗОНА: схема автомобиля -->
+      <!-- ЛЕВАЯ ЗОНА: чертёж автомобиля.
+           В #stageCanvas JS клонирует нужный <template> из MODELS —
+           разметка шаблонов статична, innerHTML не используется.
+           Идентификаторы интерактивных зон (engine-bay, transmission-bay,
+           front-chassis, rear-chassis, ecu-cabin) одинаковы во всех трёх
+           чертежах — это контракт для JS-хендлеров. -->
       <section class="stage" aria-label="Схема автомобиля">
-        <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Интерактивная схема автомобиля, вид сбоку">
-          <!-- НЕИНТЕРАКТИВНЫЙ КУЗОВ: контуры, стекло, порог/подвеска, земля -->
-          <g id="body" aria-hidden="true">
-            <path class="car__ground" d="M 60 350 L 740 350" fill="none" />
-            <path class="car__outline" d="M 90 272 L 90 228 L 118 208 L 300 192 L 366 116 L 486 116 L 560 194 L 672 198 L 706 232 L 712 272 Z" fill="none" />
-            <path class="car__arch" d="M 168 272 A 72 72 0 0 1 312 272" fill="none" />
-            <path class="car__arch" d="M 528 272 A 72 72 0 0 1 672 272" fill="none" />
-            <path class="car__glass" d="M 312 196 L 372 126 L 480 126 L 552 194" fill="none" />
-            <path class="car__glass" d="M 426 126 L 426 194" fill="none" />
-            <path class="car__sill" d="M 104 288 L 178 288" fill="none" />
-            <path class="car__sill" d="M 314 288 L 524 288" fill="none" />
-            <path class="car__sill" d="M 662 288 L 696 288" fill="none" />
-          </g>
-
-          <!-- 1. ДВИГАТЕЛЬ: моторный отсек, перед-низ слева (x 94–164, y 200–270) -->
-          <g id="engine" class="car__module" data-module="engine" tabindex="0" role="button" aria-label="Двигатель">
-            <rect class="car__hit" x="94" y="200" width="70" height="70" />
-            <g class="car__part">
-              <rect x="98" y="206" width="60" height="58" rx="5" fill="none" />
-              <path d="M 106 216 L 150 216" fill="none" />
-              <path d="M 106 228 L 150 228" fill="none" />
-              <path d="M 106 240 L 150 240" fill="none" />
-              <circle cx="128" cy="254" r="7" fill="none" />
-            </g>
-          </g>
-
-          <!-- 2. ПОДВЕСКА: рычаги у колёс и пружины между колёсами снизу (x 296–514, y 282–342) -->
-          <g id="suspension" class="car__module" data-module="suspension" tabindex="0" role="button" aria-label="Подвеска">
-            <rect class="car__hit" x="296" y="282" width="218" height="60" />
-            <g class="car__part">
-              <path d="M 302 290 L 332 300 L 302 310" fill="none" />
-              <path d="M 302 322 L 332 300" fill="none" />
-              <path d="M 508 290 L 478 300 L 508 310" fill="none" />
-              <path d="M 508 322 L 478 300" fill="none" />
-              <path d="M 332 300 L 478 300" fill="none" />
-              <path d="M 392 288 L 384 296 L 400 304 L 384 312 L 400 320 L 384 328 L 392 334" fill="none" />
-              <path d="M 452 288 L 444 296 L 460 304 L 444 312 L 460 320 L 444 328 L 452 334" fill="none" />
-            </g>
-          </g>
-
-          <!-- 3. КОЛЁСА: оба колеса, окружности со спицами.
-               hit — ПОЛНЫЙ диск r 54 на каждое колесо, без дырки в центре:
-               центр-ступица (r < 15) кликабельна как «Колёса», а зона
-               диска перекрывается кольцом #brakes (оно ниже в DOM). -->
-          <g id="wheels" class="car__module" data-module="wheels" tabindex="0" role="button" aria-label="Колёса">
-            <circle class="car__hit" cx="240" cy="296" r="54" />
-            <circle class="car__hit" cx="600" cy="296" r="54" />
-            <g class="car__part">
-              <circle cx="240" cy="296" r="54" fill="none" />
-              <circle cx="600" cy="296" r="54" fill="none" />
-              <circle cx="240" cy="296" r="32" fill="none" />
-              <circle cx="600" cy="296" r="32" fill="none" />
-              <circle cx="240" cy="296" r="9" fill="none" />
-              <circle cx="600" cy="296" r="9" fill="none" />
-              <path d="M 250 296 L 270 296 M 243 306 L 249 325 M 232 302 L 216 314 M 232 290 L 216 278 M 243 286 L 249 267" fill="none" />
-              <path d="M 610 296 L 630 296 M 603 306 L 609 325 M 592 302 L 576 314 M 592 290 L 576 278 M 603 286 L 609 267" fill="none" />
-            </g>
-          </g>
-
-          <!-- 4. ТОРМОЗА: диски и суппорты у обоих колёс.
-               hit — кольцо fill-rule="evenodd" вокруг центра: внешний r 27
-               (накрывает нарисованный диск r 25 и пальцы суппорта),
-               внутренний r 15 (оставляет ступицу и спицы за «Колёсами»).
-               Итоговые зоны: r < 15 → колёса, 15…27 → тормоза, r > 27 → колёса. -->
-          <g id="brakes" class="car__module" data-module="brakes" tabindex="0" role="button" aria-label="Тормоза">
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 213 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 225 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 573 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 585 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
-            <g class="car__part">
-              <circle cx="240" cy="296" r="25" fill="none" />
-              <circle cx="600" cy="296" r="25" fill="none" />
-              <circle cx="240" cy="296" r="11" fill="none" />
-              <circle cx="600" cy="296" r="11" fill="none" />
-              <path d="M 218 283 L 236 271 M 222 290 L 240 278" fill="none" />
-              <path d="M 578 283 L 596 271 M 582 290 L 600 278" fill="none" />
-            </g>
-          </g>
-        </svg>
+        <div class="stage__canvas" id="stageCanvas"></div>
         <div class="stage__hint">Нажмите на узел схемы, чтобы перейти к его настройке</div>
       </section>
 
@@ -118,5 +46,347 @@
       </section>
     </main>
   </div>
+
+  <!-- ==========================================================================
+       ЧЕРТЁЖ 1/3 — VAG MQB (Golf R): компактный хэтчбек, поперечный 4-цилиндр.
+       ========================================================================== -->
+  <template id="tpl-vag-mqb">
+    <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Чертёж VAG MQB (Golf R), вид сбоку">
+      <g class="car__body" aria-hidden="true">
+        <path class="car__ground" d="M 60 352 L 740 352" fill="none"/>
+        <path class="car__outline" d="M 96 288 L 96 248 Q 96 226 124 219 L 250 205 L 326 120 L 454 114 L 516 192 L 590 202 L 662 228 L 686 254 L 686 288 L 619 288 A 54 54 0 0 0 517 288 L 283 288 A 54 54 0 0 0 181 288 L 96 288 Z" fill="none"/>
+        <path class="car__glass" d="M 338 130 L 438 126 L 442 198 L 344 202 Z" fill="none"/>
+        <path class="car__glass" d="M 446 126 L 450 198" fill="none"/>
+        <path class="car__glass" d="M 456 126 L 508 194 L 456 198 Z" fill="none"/>
+        <path class="car__sill" d="M 292 276 L 508 276" fill="none"/>
+        <path class="car__sill" d="M 344 202 L 342 264" fill="none"/>
+        <path class="car__sill" d="M 450 198 L 452 264" fill="none"/>
+        <path class="car__sill" d="M 404 208 L 424 208" fill="none"/>
+        <g class="car__wheel">
+          <circle cx="232" cy="306" r="46" fill="none"/>
+          <circle cx="232" cy="306" r="28" fill="none"/>
+          <circle cx="232" cy="306" r="8" fill="none"/>
+          <path d="M 242 306 L 256 306 M 239 312 L 249 322 M 232 315 L 232 331 M 225 312 L 215 322 M 222 306 L 208 306" fill="none"/>
+        </g>
+        <g class="car__wheel">
+          <circle cx="568" cy="306" r="46" fill="none"/>
+          <circle cx="568" cy="306" r="28" fill="none"/>
+          <circle cx="568" cy="306" r="8" fill="none"/>
+          <path d="M 578 306 L 592 306 M 575 312 L 585 322 M 568 315 L 568 331 M 561 312 L 551 322 M 558 306 L 544 306" fill="none"/>
+        </g>
+      </g>
+
+      <!-- 1. МОТОРНЫЙ ОТСЕК: поперечный 4-цилиндр + интеркулер -->
+      <g id="engine-bay" class="car__module interactive-bay" data-bay="engine-bay" data-module="engine" tabindex="0" role="button" aria-label="Моторный отсек">
+        <rect class="car__hit" x="112" y="200" width="178" height="58"/>
+        <g class="bay__stroke">
+          <path d="M 118 214 L 118 252 M 125 214 L 125 252" fill="none"/>
+          <rect x="132" y="222" width="38" height="30" rx="2" fill="none"/>
+          <path d="M 138 224 L 138 250 M 145 224 L 145 250 M 152 224 L 152 250 M 159 224 L 159 250" fill="none"/>
+          <path d="M 170 236 L 178 236" fill="none"/>
+          <rect x="178" y="226" width="94" height="26" rx="3" fill="none"/>
+          <circle cx="194" cy="219" r="4" fill="none"/>
+          <circle cx="216" cy="219" r="4" fill="none"/>
+          <circle cx="238" cy="219" r="4" fill="none"/>
+          <circle cx="260" cy="219" r="4" fill="none"/>
+          <path d="M 272 232 L 284 226 M 272 240 L 284 246" fill="none"/>
+        </g>
+        <text class="bay__label" x="248" y="208">ENG</text>
+      </g>
+
+      <!-- 2. ТРАНСМИССИЯ: МКПП поперечной компоновки, привод на переднюю ось -->
+      <g id="transmission-bay" class="car__module interactive-bay" data-bay="transmission-bay" tabindex="0" role="button" aria-label="Трансмиссия">
+        <rect class="car__hit" x="300" y="202" width="132" height="56"/>
+        <g class="bay__stroke">
+          <circle cx="356" cy="230" r="20" fill="none"/>
+          <circle cx="356" cy="230" r="12" fill="none"/>
+          <path d="M 356 210 L 356 218 M 376 230 L 368 230 M 356 250 L 356 242 M 336 230 L 344 230" fill="none"/>
+          <path d="M 376 230 L 384 230" fill="none"/>
+          <rect x="384" y="210" width="44" height="38" rx="3" fill="none"/>
+          <path d="M 392 214 L 392 244 M 400 214 L 400 244 M 408 214 L 408 244" fill="none"/>
+          <path d="M 384 244 L 302 252 M 428 230 L 432 232" fill="none"/>
+          <path d="M 410 210 L 410 203" fill="none"/>
+        </g>
+        <text class="bay__label" x="306" y="214">TRANS</text>
+      </g>
+
+      <!-- 3. ПЕРЕДНЯЯ ПОДВЕСКА И ТОРМОЗА -->
+      <g id="front-chassis" class="car__module interactive-bay" data-bay="front-chassis" data-module="suspension" tabindex="0" role="button" aria-label="Передняя подвеска и тормоза">
+        <rect class="car__hit" x="170" y="262" width="132" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="232" cy="306" r="24" fill="none"/>
+          <circle cx="232" cy="306" r="12" fill="none"/>
+          <path d="M 212 286 L 234 278 L 239 294 L 217 302 Z" fill="none"/>
+          <path d="M 188 306 L 276 306" fill="none"/>
+          <path d="M 232 306 L 250 268" fill="none"/>
+          <path d="M 244 272 L 252 280 L 242 288 L 252 296 L 242 304 L 252 312 L 244 320" fill="none"/>
+          <path d="M 232 300 L 196 316 M 232 314 L 202 330 M 232 294 L 190 288" fill="none"/>
+        </g>
+        <text class="bay__label" x="176" y="276">CHASSIS-F</text>
+      </g>
+
+      <!-- 4. ЗАДНЯЯ ПОДВЕСКА И РАЗДВОЕННЫЙ ВЫХЛОП -->
+      <g id="rear-chassis" class="car__module interactive-bay" data-bay="rear-chassis" data-module="brakes" tabindex="0" role="button" aria-label="Задняя подвеска и выхлоп">
+        <rect class="car__hit" x="496" y="262" width="200" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="568" cy="306" r="24" fill="none"/>
+          <circle cx="568" cy="306" r="12" fill="none"/>
+          <path d="M 588 286 L 566 278 L 561 294 L 583 302 Z" fill="none"/>
+          <path d="M 522 306 L 648 306" fill="none"/>
+          <path d="M 568 306 L 550 268" fill="none"/>
+          <path d="M 556 272 L 548 280 L 558 288 L 548 296 L 558 304 L 548 312 L 556 320" fill="none"/>
+          <rect x="604" y="296" width="46" height="24" rx="7" fill="none"/>
+          <path d="M 650 300 L 682 300 M 650 314 L 688 314" fill="none"/>
+          <path d="M 660 296 L 660 318 M 676 311 L 676 320" fill="none"/>
+        </g>
+        <text class="bay__label" x="620" y="276">CHASSIS-R</text>
+      </g>
+
+      <!-- 5. САЛОН И ЭЛЕКТРОНИКА -->
+      <g id="ecu-cabin" class="car__module interactive-bay" data-bay="ecu-cabin" tabindex="0" role="button" aria-label="Салон и электроника">
+        <rect class="car__hit" x="348" y="124" width="164" height="74"/>
+        <g class="bay__stroke">
+          <path d="M 376 190 L 404 172" fill="none"/>
+          <circle cx="416" cy="180" r="13" fill="none"/>
+          <path d="M 404 168 L 428 168" fill="none"/>
+          <rect x="424" y="148" width="26" height="14" rx="2" fill="none"/>
+          <path d="M 438 200 L 438 168 L 452 160 L 468 168 L 468 200" fill="none"/>
+          <path d="M 432 200 L 476 200" fill="none"/>
+          <path d="M 486 200 L 486 176 L 498 170 L 508 176 L 508 200" fill="none"/>
+          <rect x="352" y="140" width="32" height="18" rx="2" fill="none"/>
+          <path d="M 358 140 L 358 134 M 366 140 L 366 134 M 374 140 L 374 134" fill="none"/>
+        </g>
+        <text class="bay__label" x="386" y="140">ECU</text>
+      </g>
+    </svg>
+  </template>
+
+  <!-- ==========================================================================
+       ЧЕРТЁЖ 2/3 — Nissan GT-R: низкое купе, длинный капот, трансэксл.
+       ========================================================================== -->
+  <template id="tpl-gtr">
+    <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Чертёж Nissan GT-R, вид сбоку">
+      <g class="car__body" aria-hidden="true">
+        <path class="car__ground" d="M 60 350 L 740 350" fill="none"/>
+        <path class="car__outline" d="M 78 282 L 82 246 Q 86 228 114 224 L 296 210 L 384 134 L 508 128 L 594 212 L 668 224 L 706 250 L 710 282 L 639 282 A 58 58 0 0 0 529 282 L 279 282 A 58 58 0 0 0 169 282 L 78 282 Z" fill="none"/>
+        <path class="car__glass" d="M 398 142 L 500 138 L 552 206 L 404 206 Z" fill="none"/>
+        <path class="car__glass" d="M 512 138 L 566 204 L 514 204 Z" fill="none"/>
+        <path class="car__sill" d="M 288 272 L 520 272" fill="none"/>
+        <path class="car__sill" d="M 400 208 L 404 262 M 572 208 L 576 262" fill="none"/>
+        <path class="car__sill" d="M 440 212 L 458 212" fill="none"/>
+        <path class="car__sill" d="M 660 216 L 704 206 L 708 218" fill="none"/>
+        <g class="car__wheel">
+          <circle cx="224" cy="300" r="50" fill="none"/>
+          <circle cx="224" cy="300" r="30" fill="none"/>
+          <circle cx="224" cy="300" r="9" fill="none"/>
+          <path d="M 235 300 L 251 300 M 231 307 L 242 319 M 224 310 L 224 327 M 217 307 L 206 319 M 213 300 L 197 300" fill="none"/>
+        </g>
+        <g class="car__wheel">
+          <circle cx="584" cy="300" r="50" fill="none"/>
+          <circle cx="584" cy="300" r="30" fill="none"/>
+          <circle cx="584" cy="300" r="9" fill="none"/>
+          <path d="M 595 300 L 611 300 M 591 307 L 602 319 M 584 310 L 584 327 M 577 307 L 566 319 M 573 300 L 557 300" fill="none"/>
+        </g>
+      </g>
+
+      <!-- 1. МОТОРНЫЙ ОТСЕК: продольный V6, две турбины -->
+      <g id="engine-bay" class="car__module interactive-bay" data-bay="engine-bay" data-module="engine" tabindex="0" role="button" aria-label="Моторный отсек">
+        <rect class="car__hit" x="100" y="196" width="200" height="58"/>
+        <g class="bay__stroke">
+          <circle cx="120" cy="214" r="11" fill="none"/>
+          <circle cx="116" cy="214" r="4" fill="none"/>
+          <circle cx="120" cy="242" r="11" fill="none"/>
+          <circle cx="116" cy="242" r="4" fill="none"/>
+          <path d="M 131 214 L 152 212 M 131 242 L 152 242" fill="none"/>
+          <path d="M 166 230 L 188 206 L 264 212 L 260 232 Z" fill="none"/>
+          <path d="M 166 236 L 192 252 L 266 248 L 260 232 Z" fill="none"/>
+          <path d="M 160 228 L 264 224 L 264 236 L 160 240 Z" fill="none"/>
+          <path d="M 200 210 L 198 202 M 220 211 L 218 203 M 240 212 L 238 204" fill="none"/>
+        </g>
+        <text class="bay__label" x="272" y="208">ENG</text>
+      </g>
+
+      <!-- 2. ТРАНСМИССИЯ: маховик и коробка, смещённая назад (трансэксл) -->
+      <g id="transmission-bay" class="car__module interactive-bay" data-bay="transmission-bay" tabindex="0" role="button" aria-label="Трансмиссия">
+        <rect class="car__hit" x="310" y="196" width="190" height="58"/>
+        <g class="bay__stroke">
+          <circle cx="368" cy="226" r="20" fill="none"/>
+          <circle cx="368" cy="226" r="12" fill="none"/>
+          <path d="M 368 206 L 368 214 M 388 226 L 380 226 M 368 246 L 368 238 M 348 226 L 356 226" fill="none"/>
+          <rect x="396" y="204" width="72" height="42" rx="3" fill="none"/>
+          <path d="M 408 208 L 408 242 M 420 208 L 420 242 M 432 208 L 432 242 M 444 208 L 444 242 M 456 208 L 456 242" fill="none"/>
+          <circle cx="480" cy="240" r="12" fill="none"/>
+          <path d="M 480 228 L 480 252" fill="none"/>
+          <path d="M 492 240 L 498 242 M 396 246 L 312 252" fill="none"/>
+        </g>
+        <text class="bay__label" x="316" y="208">TRANS</text>
+      </g>
+
+      <!-- 3. ПЕРЕДНЯЯ ПОДВЕСКА И ТОРМОЗА -->
+      <g id="front-chassis" class="car__module interactive-bay" data-bay="front-chassis" data-module="suspension" tabindex="0" role="button" aria-label="Передняя подвеска и тормоза">
+        <rect class="car__hit" x="160" y="262" width="140" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="224" cy="300" r="26" fill="none"/>
+          <circle cx="224" cy="300" r="13" fill="none"/>
+          <path d="M 202 278 L 226 272 L 231 290 L 207 296 Z" fill="none"/>
+          <path d="M 176 300 L 272 300" fill="none"/>
+          <path d="M 224 300 L 246 264" fill="none"/>
+          <path d="M 238 268 L 246 276 L 236 284 L 246 292 L 236 300 L 246 308 L 238 316" fill="none"/>
+          <path d="M 224 294 L 186 308 M 224 308 L 190 324 M 224 292 L 180 284" fill="none"/>
+        </g>
+        <text class="bay__label" x="166" y="276">CHASSIS-F</text>
+      </g>
+
+      <!-- 4. ЗАДНЯЯ ПОДВЕСКА, ТРАНСЭКСЛ И ВЫХЛОП -->
+      <g id="rear-chassis" class="car__module interactive-bay" data-bay="rear-chassis" data-module="brakes" tabindex="0" role="button" aria-label="Задняя подвеска и выхлоп">
+        <rect class="car__hit" x="510" y="262" width="230" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="584" cy="300" r="26" fill="none"/>
+          <circle cx="584" cy="300" r="13" fill="none"/>
+          <path d="M 606 278 L 582 272 L 577 290 L 601 296 Z" fill="none"/>
+          <path d="M 512 300 L 640 300" fill="none"/>
+          <path d="M 584 300 L 562 264" fill="none"/>
+          <path d="M 574 268 L 566 276 L 576 284 L 566 292 L 576 300 L 566 308 L 574 316" fill="none"/>
+          <path d="M 514 276 L 546 286" fill="none"/>
+          <rect x="636" y="284" width="48" height="20" rx="6" fill="none"/>
+          <path d="M 684 294 L 716 294" fill="none"/>
+          <circle cx="718" cy="288" r="4" fill="none"/>
+          <circle cx="718" cy="301" r="4" fill="none"/>
+        </g>
+        <text class="bay__label" x="646" y="276">CHASSIS-R</text>
+      </g>
+
+      <!-- 5. САЛОН И ЭЛЕКТРОНИКА -->
+      <g id="ecu-cabin" class="car__module interactive-bay" data-bay="ecu-cabin" tabindex="0" role="button" aria-label="Салон и электроника">
+        <rect class="car__hit" x="386" y="128" width="150" height="64"/>
+        <g class="bay__stroke">
+          <path d="M 390 186 L 418 170" fill="none"/>
+          <circle cx="426" cy="178" r="12" fill="none"/>
+          <path d="M 414 166 L 438 166" fill="none"/>
+          <path d="M 452 190 L 452 168 L 466 160 L 482 168 L 482 190" fill="none"/>
+          <path d="M 446 190 L 490 190" fill="none"/>
+          <rect x="494" y="148" width="34" height="18" rx="2" fill="none"/>
+          <path d="M 500 148 L 500 142 M 508 148 L 508 142 M 516 148 L 516 142" fill="none"/>
+        </g>
+        <text class="bay__label" x="392" y="144">ECU</text>
+      </g>
+    </svg>
+  </template>
+
+  <!-- ==========================================================================
+       ЧЕРТЁЖ 3/3 — Tesla Model S Plaid: обтекаемый 4-дверный электроседан.
+       Выхлопа нет: вместо коробки — плоский батарейный блок по всему днищу.
+       ========================================================================== -->
+  <template id="tpl-plaid">
+    <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Чертёж Tesla Model S Plaid, вид сбоку">
+      <g class="car__body" aria-hidden="true">
+        <path class="car__ground" d="M 60 348 L 740 348" fill="none"/>
+        <path class="car__outline" d="M 74 282 L 76 248 Q 78 230 108 226 L 262 210 L 352 122 L 470 110 L 566 190 L 652 208 L 706 236 L 712 282 L 655 282 A 58 58 0 0 0 545 282 L 271 282 A 58 58 0 0 0 161 282 L 74 282 Z" fill="none"/>
+        <path class="car__glass" d="M 366 130 L 462 118 L 500 190 L 372 194 Z" fill="none"/>
+        <path class="car__glass" d="M 512 122 L 566 188 L 512 190 Z" fill="none"/>
+        <path class="car__sill" d="M 280 272 L 536 272" fill="none"/>
+        <path class="car__sill" d="M 372 196 L 370 254 M 500 194 L 502 254" fill="none"/>
+        <path class="car__sill" d="M 400 206 L 416 206 M 462 204 L 478 204" fill="none"/>
+        <path class="car__sill" d="M 76 282 L 76 290 L 150 290" fill="none"/>
+        <path class="car__sill" d="M 620 210 L 700 232" fill="none"/>
+        <g class="car__wheel">
+          <circle cx="216" cy="300" r="48" fill="none"/>
+          <circle cx="216" cy="300" r="30" fill="none"/>
+          <circle cx="216" cy="300" r="22" fill="none"/>
+          <circle cx="216" cy="300" r="8" fill="none"/>
+          <path d="M 226 300 L 240 300 M 222 307 L 231 320 M 216 310 L 216 326 M 210 307 L 201 320 M 206 300 L 192 300" fill="none"/>
+        </g>
+        <g class="car__wheel">
+          <circle cx="600" cy="300" r="48" fill="none"/>
+          <circle cx="600" cy="300" r="30" fill="none"/>
+          <circle cx="600" cy="300" r="22" fill="none"/>
+          <circle cx="600" cy="300" r="8" fill="none"/>
+          <path d="M 610 300 L 624 300 M 606 307 L 615 320 M 600 310 L 600 326 M 594 307 L 585 320 M 590 300 L 576 300" fill="none"/>
+        </g>
+      </g>
+
+      <!-- 1. МОТОРНЫЙ ОТСЕК: передний электромотор и блоки инверторов -->
+      <g id="engine-bay" class="car__module interactive-bay" data-bay="engine-bay" data-module="engine" tabindex="0" role="button" aria-label="Моторный отсек и инверторы">
+        <rect class="car__hit" x="96" y="194" width="176" height="66"/>
+        <g class="bay__stroke">
+          <path d="M 104 240 L 124 238 M 104 250 L 124 248" fill="none"/>
+          <rect x="132" y="200" width="54" height="22" rx="3" fill="none"/>
+          <path d="M 142 202 L 142 220 M 152 202 L 152 220 M 162 202 L 162 220 M 172 202 L 172 220" fill="none"/>
+          <rect x="192" y="198" width="50" height="20" rx="3" fill="none"/>
+          <path d="M 202 200 L 202 216 M 212 200 L 212 216 M 222 200 L 222 216 M 232 200 L 232 216" fill="none"/>
+          <rect x="248" y="204" width="24" height="18" rx="3" fill="none"/>
+          <circle cx="180" cy="236" r="20" fill="none"/>
+          <circle cx="180" cy="236" r="10" fill="none"/>
+          <path d="M 160 236 L 200 236" fill="none"/>
+          <path d="M 198 240 L 214 256" fill="none"/>
+          <path d="M 186 198 L 186 210 M 242 196 L 242 204" fill="none"/>
+        </g>
+        <text class="bay__label" x="102" y="210">ENG</text>
+      </g>
+
+      <!-- 2. ТРАНСМИССИЯ: плоский батарейный блок по всему днищу между осями -->
+      <g id="transmission-bay" class="car__module interactive-bay" data-bay="transmission-bay" tabindex="0" role="button" aria-label="Батарейный блок">
+        <rect class="car__hit" x="276" y="214" width="266" height="44"/>
+        <g class="bay__stroke">
+          <rect x="282" y="228" width="254" height="26" rx="4" fill="none"/>
+          <path d="M 302 230 L 302 252 M 322 230 L 322 252 M 342 230 L 342 252 M 362 230 L 362 252 M 382 230 L 382 252 M 402 230 L 402 252 M 422 230 L 422 252 M 442 230 L 442 252 M 462 230 L 462 252 M 482 230 L 482 252 M 502 230 L 502 252" fill="none"/>
+          <path d="M 286 241 L 532 241" fill="none"/>
+          <rect x="286" y="232" width="14" height="9" rx="2" fill="none"/>
+          <rect x="500" y="232" width="32" height="9" rx="2" fill="none"/>
+        </g>
+        <text class="bay__label" x="284" y="224">TRANS</text>
+      </g>
+
+      <!-- 3. ПЕРЕДНЯЯ ПОДВЕСКА И ТОРМОЗА -->
+      <g id="front-chassis" class="car__module interactive-bay" data-bay="front-chassis" data-module="suspension" tabindex="0" role="button" aria-label="Передняя подвеска и тормоза">
+        <rect class="car__hit" x="150" y="262" width="150" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="216" cy="300" r="24" fill="none"/>
+          <circle cx="216" cy="300" r="12" fill="none"/>
+          <path d="M 198 280 L 222 274 L 226 292 L 202 298 Z" fill="none"/>
+          <path d="M 170 300 L 270 300" fill="none"/>
+          <rect x="224" y="270" width="13" height="30" rx="5" fill="none"/>
+          <path d="M 216 300 L 244 266" fill="none"/>
+          <path d="M 216 292 L 180 306 M 216 310 L 184 326 M 216 290 L 172 282" fill="none"/>
+        </g>
+        <text class="bay__label" x="156" y="276">CHASSIS-F</text>
+      </g>
+
+      <!-- 4. ЗАДНЯЯ ПОДВЕСКА: два задних электромотора, без выхлопа -->
+      <g id="rear-chassis" class="car__module interactive-bay" data-bay="rear-chassis" data-module="brakes" tabindex="0" role="button" aria-label="Задняя подвеска и электромоторы">
+        <rect class="car__hit" x="500" y="262" width="212" height="72"/>
+        <g class="bay__stroke">
+          <circle cx="600" cy="300" r="24" fill="none"/>
+          <circle cx="600" cy="300" r="12" fill="none"/>
+          <path d="M 618 280 L 594 274 L 590 292 L 614 298 Z" fill="none"/>
+          <circle cx="532" cy="300" r="15" fill="none"/>
+          <circle cx="532" cy="300" r="7" fill="none"/>
+          <circle cx="668" cy="300" r="15" fill="none"/>
+          <circle cx="668" cy="300" r="7" fill="none"/>
+          <path d="M 517 300 L 585 300 M 615 300 L 653 300" fill="none"/>
+          <rect x="610" y="270" width="13" height="30" rx="5" fill="none"/>
+          <path d="M 504 274 L 556 266 M 696 274 L 644 266" fill="none"/>
+        </g>
+        <text class="bay__label" x="676" y="276">CHASSIS-R</text>
+      </g>
+
+      <!-- 5. САЛОН И ЭЛЕКТРОНИКА -->
+      <g id="ecu-cabin" class="car__module interactive-bay" data-bay="ecu-cabin" tabindex="0" role="button" aria-label="Салон и электроника">
+        <rect class="car__hit" x="360" y="116" width="180" height="84"/>
+        <g class="bay__stroke">
+          <path d="M 364 188 L 400 170" fill="none"/>
+          <path d="M 372 160 L 470 152" fill="none"/>
+          <circle cx="410" cy="180" r="14" fill="none"/>
+          <path d="M 404 172 L 416 188" fill="none"/>
+          <path d="M 432 194 L 432 162 L 446 154 L 462 162 L 462 194" fill="none"/>
+          <path d="M 426 194 L 470 194" fill="none"/>
+          <path d="M 482 194 L 482 170 L 494 164 L 504 170 L 504 194" fill="none"/>
+          <rect x="512" y="140" width="26" height="34" rx="3" fill="none"/>
+          <path d="M 518 152 L 532 152 M 518 160 L 532 160" fill="none"/>
+        </g>
+        <text class="bay__label" x="368" y="132">ECU</text>
+      </g>
+    </svg>
+  </template>
 </body>
 </html>

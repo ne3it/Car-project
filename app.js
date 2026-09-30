@@ -1,7 +1,8 @@
 /* ============================================================================
    Интерактивный конфигуратор автомобиля — логика интерфейса.
    Один IIFE, без модулей и внешних зависимостей (работает по file://).
-   Порядок секций: METRICS → PartsDB → AppState → buildUI → render → bindEvents → init.
+   Порядок секций: METRICS → MODELS/BAYS → PartsDB → AppState → buildUI
+   → render → bindEvents → init.
    ========================================================================== */
 
 (function () {
@@ -19,6 +20,43 @@
 
   /* Порядок кнопок вариантов внутри карточки модуля. */
   var OPTION_ORDER = ['stock', 'sport', 'track'];
+
+  /* --------------------------------------------------------------------------
+     MODELS — три модели, у каждой свой <template> с чертежом в index.html.
+     id — ключ шаблона (#tpl-<id>) и одновременно AppState.currentModelId.
+     label — длинная подпись на десктопе, short — на узких экранах.
+     -------------------------------------------------------------------------- */
+  var MODELS = [
+    { id: 'vag-mqb', label: 'VAG MQB',     short: 'MQB',   title: 'VAG MQB (Golf R)' },
+    { id: 'gtr',     label: 'Nissan GT-R', short: 'GT-R',  title: 'Nissan GT-R (R35)' },
+    { id: 'plaid',   label: 'Tesla Plaid', short: 'PLAID', title: 'Tesla Model S Plaid' }
+  ];
+  var DEFAULT_MODEL_ID = 'vag-mqb';
+
+  var MODEL_BY_ID = {};
+  MODELS.forEach(function (model) { MODEL_BY_ID[model.id] = model; });
+
+  /* --------------------------------------------------------------------------
+     BAYS — пять интерактивных зон чертежа. id одинаковы во всех трёх шаблонах,
+     это контракт с обработчиками кликов. module — ключ PartsDB, который
+     подсвечивается в правой панели; null означает информационную зону
+     (трансмиссия, салон) без карточки тюнинга — клик по ней подсвечивает
+     только саму зону и не ломает делегирование по [data-module].
+     -------------------------------------------------------------------------- */
+  var BAYS = [
+    { id: 'engine-bay',       label: 'Моторный отсек',         module: 'engine' },
+    { id: 'transmission-bay', label: 'Трансмиссия',            module: null },
+    { id: 'front-chassis',    label: 'Передняя подвеска',      module: 'suspension' },
+    { id: 'rear-chassis',     label: 'Задняя подвеска',        module: 'brakes' },
+    { id: 'ecu-cabin',        label: 'Салон и электроника',    module: null }
+  ];
+
+  var BAY_BY_ID = {};
+  var BAY_BY_MODULE = {};
+  BAYS.forEach(function (bay) {
+    BAY_BY_ID[bay.id] = bay;
+    if (bay.module) BAY_BY_MODULE[bay.module] = bay.id;
+  });
 
   /* --------------------------------------------------------------------------
      PartsDB — единственный источник правды по деталям.
@@ -93,7 +131,9 @@
       brakes: 'stock',
       wheels: 'stock'
     },
+    currentModelId: DEFAULT_MODEL_ID,
     activeModule: null,
+    activeBay: null,
     BASE: 50,
     MIN: 0,
     MAX: 100,
@@ -138,23 +178,53 @@
       var part = PartsDB[module];
       if (!part || !part.options || !part.options[option]) return;
       this.config[module] = option;
-      this.activeModule = module;
+      this.setActive(module);
       render();
+    },
+
+    /* Единая точка выделения: модуль панели + связанная с ним зона чертежа.
+       null гасит и то, и другое. Модуль без зоны (wheels) оставляет
+       activeBay = null — на схеме просто нечего подсвечивать. */
+    setActive: function (module) {
+      this.activeModule = module;
+      this.activeBay = module === null ? null : (BAY_BY_MODULE[module] || null);
     },
 
     /* Только подсветка: активный модуль или null (гасит все подсветки). */
     select: function (module) {
       if (module !== null && !PartsDB[module]) return;
-      this.activeModule = module;
+      this.setActive(module);
       render();
     },
 
+    /* Выбор зоны чертежа. Зона с module подсвечивает и карточку панели;
+       информационная зона (module = null) сбрасывает подсветку карточек,
+       но остаётся выделенной сама. */
+    selectBay: function (bayId) {
+      var bay = BAY_BY_ID[bayId];
+      if (!bay) return;
+      this.setActive(bay.module || null);
+      this.activeBay = bayId;
+      render();
+    },
+
+    /* Смена модели. Чертежей и id зон у всех моделей одинаковые, поэтому
+       выделение и конфиг переживают переключение без перезагрузки —
+       меняется только геометрия внутри зон. */
+    setModel: function (modelId) {
+      if (!MODEL_BY_ID[modelId] || modelId === this.currentModelId) return;
+      this.currentModelId = modelId;
+      render();
+    },
+
+    /* Сброс конфигурации: варианты → stock, подсветки гаснут.
+       Выбранная модель не трогается — это выбор пользователя, а не тюнинг. */
     reset: function () {
       var self = this;
       Object.keys(self.config).forEach(function (moduleKey) {
         self.config[moduleKey] = 'stock';
       });
-      self.activeModule = null;
+      self.setActive(null);
       render();
     }
   };
@@ -165,14 +235,24 @@
      -------------------------------------------------------------------------- */
   var moduleEls = {};   // { moduleKey: { card: HTMLElement, options: { optKey: HTMLElement } } }
   var statEls = {};     // { metricId: { track: HTMLElement, bar: HTMLElement, value: HTMLElement } }
-  var svgModuleEls = []; // NodeList-подобный массив g[data-module]
+  var modelBtnEls = {}; // { modelId: HTMLElement }
+  var bayEls = {};      // { bayId: SVGGElement } — узлы текущего чертежа
   var stageEl = null;
+  var stageCanvasEl = null;
   var modulesHostEl = null;
   var statsHostEl = null;
   var totalPriceEl = null;
   var resetBtnEl = null;
   var accordionToggleEl = null;
   var panelBodyEl = null;
+  var modelSwitchEl = null;
+  var stageHintEl = null;
+  var stageHintText = '';
+
+  /* Модель, чей <template> уже развёрнут в #stageCanvas. render() подменяет
+     чертёж только при изменении этого значения — то есть переключение
+     моделей не трогает DOM в остальные вызовы render(). */
+  var renderedModelId = null;
 
   var priceFormatter = null;
   try {
@@ -200,6 +280,10 @@
     resetBtnEl = document.getElementById('resetBtn');
     accordionToggleEl = document.getElementById('accordionToggle');
     panelBodyEl = document.getElementById('panelBody');
+    modelSwitchEl = document.getElementById('modelSwitch');
+    stageCanvasEl = document.getElementById('stageCanvas');
+    stageHintEl = document.querySelector('.stage__hint');
+    stageHintText = stageHintEl ? stageHintEl.textContent : '';
     /* Стартовое намерение пользователя берём из разметки. */
     userWantsExpanded = !accordionToggleEl ||
       accordionToggleEl.getAttribute('aria-expanded') !== 'false';
@@ -207,6 +291,32 @@
 
     moduleEls = {};
     statEls = {};
+    modelBtnEls = {};
+
+    /* --- переключатель моделей --- */
+    if (modelSwitchEl) {
+      MODELS.forEach(function (model) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'model-switch__btn';
+        button.setAttribute('data-model-id', model.id);
+        button.setAttribute('aria-pressed', 'false');
+        button.title = model.title;
+
+        var long = document.createElement('span');
+        long.className = 'model-switch__long';
+        long.appendChild(document.createTextNode(model.label));
+
+        var short = document.createElement('span');
+        short.className = 'model-switch__short';
+        short.appendChild(document.createTextNode(model.short));
+
+        button.appendChild(long);
+        button.appendChild(short);
+        modelSwitchEl.appendChild(button);
+        modelBtnEls[model.id] = button;
+      });
+    }
 
     /* --- карточки модулей --- */
     Object.keys(PartsDB).forEach(function (moduleKey) {
@@ -285,23 +395,68 @@
       statEls[metric.id] = { track: track, bar: bar, value: value };
     });
 
-    /* SVG-модули статичны в index.html — кэшируем узлы для точечного класса. */
-    svgModuleEls = Array.prototype.slice.call(document.querySelectorAll('g[data-module]'));
+    /* Узлы зон чертежа появятся после первой отрисовки шаблона —
+       renderModelBlueprint() сам пересоберёт bayEls. */
+  }
+
+  /* --------------------------------------------------------------------------
+     renderModelBlueprint — подстановка чертежа модели в левую панель.
+     Клонирует <template id="tpl-<modelId>"> из разметки (без innerHTML) и
+     пересобирает кэш зон. Возвращает true, если чертёж реально сменился.
+     -------------------------------------------------------------------------- */
+  function renderModelBlueprint() {
+    var modelId = AppState.currentModelId;
+    if (modelId === renderedModelId) return false;
+
+    var template = document.getElementById('tpl-' + modelId);
+    if (!template || !stageCanvasEl) return false;
+
+    /* Зона под фокусом (клавиатура/Enter) переживает подмену чертежа:
+       после клонирования возвращаем фокус на ту же зону новой модели. */
+    var focusedBay = null;
+    var active = document.activeElement;
+    if (active && active.getAttribute && stageCanvasEl.contains(active)) {
+      focusedBay = active.closest('[data-bay]');
+      focusedBay = focusedBay && focusedBay.getAttribute('data-bay');
+    }
+
+    while (stageCanvasEl.firstChild) {
+      stageCanvasEl.removeChild(stageCanvasEl.firstChild);
+    }
+    stageCanvasEl.appendChild(template.content.cloneNode(true));
+    renderedModelId = modelId;
+
+    bayEls = {};
+    Array.prototype.slice.call(stageCanvasEl.querySelectorAll('g[data-bay]'))
+      .forEach(function (group) {
+        bayEls[group.getAttribute('data-bay')] = group;
+      });
+
+    if (focusedBay && bayEls[focusedBay] && bayEls[focusedBay].focus) {
+      bayEls[focusedBay].focus();
+    }
+
+    return true;
   }
 
   /* --------------------------------------------------------------------------
      render — единственная точка перерисовки. Идемпотентна: читает только
      AppState, не мутирует DOM-структуру, не трогает фокус.
      Переключаемые селекторы:
-       .stat__bar (inline width), .stat__value (textContent),
-       .stat__track[aria-valuenow], #totalPrice (textContent),
-       g[data-module].active, .module.active, .option.is-active, .option[aria-pressed].
+        .stat__bar (inline width), .stat__value (textContent),
+        .stat__track[aria-valuenow], #totalPrice (textContent),
+        #stageCanvas (чертёж текущей модели — только при смене модели),
+        g[data-bay].active, .model-switch__btn.is-active,
+        .module.active, .option.is-active, .option[aria-pressed].
      Анимацию полосы делает CSS-transition, не JS.
      -------------------------------------------------------------------------- */
   function render() {
     var stats = AppState.computeStats();
     var price = AppState.computePrice();
     var active = AppState.activeModule;
+
+    /* 0. Чертёж модели: разворачиваем шаблон, если модель сменилась */
+    renderModelBlueprint();
 
     /* 1. Полосы и подписи метрик */
     METRICS.forEach(function (metric) {
@@ -316,17 +471,40 @@
     /* 2. Итоговая цена */
     if (totalPriceEl) totalPriceEl.textContent = formatPrice(price);
 
-    /* 3. Подсветка SVG-модулей по AppState.activeModule */
-    svgModuleEls.forEach(function (group) {
-      var isActive = active !== null && group.getAttribute('data-module') === active;
-      if (isActive) {
+    /* 3. Подсветка зон чертежа по AppState.activeBay.
+       Подпись под чертёжом дублирует выбранную зону словами — мелкие
+       моноширинные метки читаются не всегда, а название зоны полезно
+       и для скринридера. */
+    BAYS.forEach(function (bay) {
+      var group = bayEls[bay.id];
+      if (!group) return;
+      if (AppState.activeBay === bay.id) {
         group.classList.add('active');
       } else {
         group.classList.remove('active');
       }
     });
 
-    /* 4. Подсветка карточек и кнопок вариантов */
+    if (stageHintEl) {
+      var activeBay = BAY_BY_ID[AppState.activeBay];
+      stageHintEl.textContent = activeBay
+        ? stageHintText + ' · ' + activeBay.label
+        : stageHintText;
+    }
+
+    /* 4. Подсветка кнопок моделей */
+    Object.keys(modelBtnEls).forEach(function (modelId) {
+      var button = modelBtnEls[modelId];
+      var isActive = modelId === AppState.currentModelId;
+      if (isActive) {
+        button.classList.add('is-active');
+      } else {
+        button.classList.remove('is-active');
+      }
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    /* 5. Подсветка карточек и кнопок вариантов */
     Object.keys(moduleEls).forEach(function (moduleKey) {
       var els = moduleEls[moduleKey];
       if (active !== null && moduleKey === active) {
@@ -382,28 +560,52 @@
     if (module !== null) setAccordion(true);
   }
 
+  /* Клик по зоне чертежа. Зона с data-module подсвечивает карточку панели,
+     информационная (transmission-bay, ecu-cabin) — только саму себя. */
+  function selectBay(bayId) {
+    AppState.selectBay(bayId);
+    if (bayId !== null) setAccordion(true);
+  }
+
   /* --------------------------------------------------------------------------
      bindEvents — делегирование: ни одного обработчика на конкретный узел.
      -------------------------------------------------------------------------- */
   function bindEvents() {
-    /* Схема: клик по модулю / по пустому месту */
+    /* Схема: клик по зоне / по модулю / по пустому месту.
+       Сначала ищем зону чертежа (data-bay), затем — модуль (data-module),
+       чтобы работали оба уровня разметки. */
     if (stageEl) {
       stageEl.addEventListener('click', function (e) {
-        var hit = e.target && e.target.closest ? e.target.closest('[data-module]') : null;
+        var target = e.target;
+        if (!target || !target.closest) return;
+        var bay = target.closest('[data-bay]');
+        if (bay) {
+          selectBay(bay.getAttribute('data-bay'));
+          return;
+        }
+        var hit = target.closest('[data-module]');
         if (hit) {
           selectModule(hit.getAttribute('data-module'));
         } else {
-          AppState.select(null);
+          AppState.setActive(null);
+          render();
         }
       });
 
       /* Клавиатура: SVG <g> сам Enter/Space не активирует */
       stageEl.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar' && e.code !== 'Space') return;
-        var hit = e.target && e.target.closest ? e.target.closest('[data-module]') : null;
+        var target = e.target;
+        if (!target || !target.closest) return;
+        var bay = target.closest('[data-bay]');
+        var hit = bay || target.closest('[data-module]');
         if (!hit) return;
         e.preventDefault();
-        selectModule(hit.getAttribute('data-module'));
+        if (bay) {
+          selectBay(bay.getAttribute('data-bay'));
+        } else {
+          selectModule(hit.getAttribute('data-module'));
+        }
       });
     }
 
@@ -420,7 +622,17 @@
           AppState.select(card.getAttribute('data-module'));
           return;
         }
-        AppState.select(null);
+        AppState.setActive(null);
+        render();
+      });
+    }
+
+    /* Переключатель моделей: подмена чертежа без перезагрузки страницы */
+    if (modelSwitchEl) {
+      modelSwitchEl.addEventListener('click', function (e) {
+        var button = e.target && e.target.closest ? e.target.closest('.model-switch__btn') : null;
+        if (!button) return;
+        AppState.setModel(button.getAttribute('data-model-id'));
       });
     }
 

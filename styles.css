@@ -16,6 +16,12 @@
   --accent: #ff4d4d;
   --accent-soft: rgba(255, 77, 77, .16);
   --hover-fill: rgba(255, 255, 255, .05);
+  /* Графит чертежей: все линии SVG и подсветка зон по :hover */
+  --drawing: #d1d1d1;
+  --bay-hover: rgba(209, 209, 209, .10);
+  --bay-glow: rgba(255, 77, 77, .45);
+  /* Моноширинный стек для маркеров зон: только системные шрифты */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* 2. RESET / БАЗА --------------------------------------------------- */
@@ -104,6 +110,47 @@ button {
   outline-offset: 2px;
 }
 
+/* Переключатель моделей (три чертежа) */
+.model-switch {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  margin-inline: auto;
+}
+
+.model-switch__btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color .2s ease, background-color .2s ease;
+}
+
+.model-switch__btn:hover {
+  color: var(--text);
+  background: var(--hover-fill);
+}
+
+.model-switch__btn.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.model-switch__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* На узких экранах остаются короткие подписи */
+.model-switch__short { display: none; }
+
 /* Основная область: две колонки. min-height:0 обязателен, иначе появится скролл */
 .app__body {
   flex: 1;
@@ -128,6 +175,15 @@ button {
   overflow: hidden;
 }
 
+.stage__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
 .car {
   display: block;
   width: 100%;
@@ -135,22 +191,35 @@ button {
   max-height: 100%;
 }
 
-/* Неинтерактивный кузов — тонкие линии */
-#body .car__outline,
-#body .car__arch,
-#body .car__glass,
-#body .car__sill,
-#body .car__ground {
+/* --- чертежи: единая тонкая линия 1.2px графитового цвета ---------------- */
+.car__body .car__outline,
+.car__body .car__glass,
+.car__body .car__sill,
+.car__body .car__ground,
+.car__body .car__wheel,
+.interactive-bay .bay__stroke {
   fill: none;
+  stroke: var(--drawing);
+  stroke-width: 1.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-#body .car__outline { stroke: var(--muted); stroke-width: 1.6; opacity: .7; }
-#body .car__arch    { stroke: var(--muted); stroke-width: 1.4; opacity: .55; }
-#body .car__glass   { stroke: var(--muted); stroke-width: 1.2; opacity: .4; }
-#body .car__sill    { stroke: var(--muted); stroke-width: 1.2; opacity: .38; }
-#body .car__ground  { stroke: var(--line); stroke-width: 1.5; }
+.car__body .car__outline { opacity: .8; }
+.car__body .car__glass   { opacity: .4; }
+.car__body .car__sill    { opacity: .35; }
+.car__body .car__ground  { stroke: var(--line); opacity: 1; }
+.car__body .car__wheel   { opacity: .55; }
+.car__body .car__wheel circle:first-child { opacity: 1; }  /* покрышка чуть плотнее */
+
+/* Форма кузова при смене модели подменяется целиком — fade на границе
+   клипов, иначе узкие шаблоны «щёлкают» на первом кадре. */
+.stage__canvas .car { animation: car-in .28s ease; }
+
+@keyframes car-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 /* Интерактивные модули.
    Механизм подсветки: сама группа не красится (fill на g не работает для
@@ -182,8 +251,7 @@ g.car__module:focus-visible {
 
 /* Зона клика: всегда кликабельна, цвет берёт из --module-fill группы.
    fill-opacity: 1 — при transparent покой остаётся полностью невидимым,
-   но при hover/.active красится (работает и для path fill-rule="evenodd"
-   у колёс — «кольцо» с дыркой, и для circle у тормозов). */
+   но при hover/.active красится. */
 .car__hit {
   fill: var(--module-fill, transparent);
   fill-opacity: 1;
@@ -192,22 +260,44 @@ g.car__module:focus-visible {
   transition: fill .22s ease;
 }
 
-/* Видимая графика модуля */
-.car__module .car__part {
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: stroke .22s ease;
+/* --- интерактивные зоны чертежа .interactive-bay -------------------------
+   Пять зон с одинаковыми id во всех трёх моделях: engine-bay,
+   transmission-bay, front-chassis, rear-chassis, ecu-cabin. */
+.interactive-bay .bay__stroke {
+  opacity: .82;
+  transition: stroke .22s ease, opacity .22s ease;
 }
 
-.car__module:hover .car__part { stroke: var(--text); }
-.car__module.active .car__part { stroke: var(--accent); }
-.car__module:focus-visible .car__part { stroke: var(--accent); }
+/* Селекторы с тегом g (специфичность 0,1,1) перебивают общие правила
+   g.car__module:hover / .active выше — значения задаются осознанно. */
+g.interactive-bay:hover { --module-fill: var(--bay-hover); }
+.interactive-bay:hover .bay__stroke { opacity: 1; }
 
-#wheels .car__part circle { stroke-width: 1.6; }
-#wheels .car__part > circle:nth-child(-n+2) { stroke-width: 5; } /* покрышка */
+g.interactive-bay.active {
+  --module-fill: var(--accent-soft);
+  filter: drop-shadow(0 0 5px var(--bay-glow));
+}
+
+.interactive-bay.active .bay__stroke {
+  stroke: var(--accent);
+  opacity: 1;
+}
+
+/* Текстовый маркер зоны: мелкий моноширинный, красится вместе с зоной */
+.bay__label {
+  fill: var(--muted);
+  /* stroke не наследуем от g.car__module:focus-visible, иначе при фокусе
+     с клавиатуры текст обводится красным и двоится. */
+  stroke: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  pointer-events: none;
+  transition: fill .22s ease;
+}
+
+.interactive-bay:hover .bay__label { fill: var(--text); }
+.interactive-bay.active .bay__label { fill: var(--accent); }
 
 .stage__hint {
   position: absolute;
@@ -426,6 +516,11 @@ g.car__module:focus-visible {
 
 /* 6. МОБИЛЬНЫЙ БРЕЙКПОИНТ < 900px ----------------------------------- */
 @media (max-width: 900px) {
+  .brand__text { display: none; }
+  .model-switch__long { display: none; }
+  .model-switch__short { display: inline; }
+  .model-switch__btn { padding: 6px 11px; }
+
   .app__body {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);
