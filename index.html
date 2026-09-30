@@ -3,119 +3,443 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Конфигуратор автомобиля</title>
+  <title>Конфигуратор автомобиля — XDRIVE</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
 <body>
   <div class="app">
+
+    <!-- ===================== ШАПКА ===================== -->
     <header class="app__header">
-      <div class="brand"><span class="brand__mark"></span> CONFIGURATOR / XDRIVE</div>
+      <div class="brand">
+        <span class="brand__mark"></span>
+        <span class="brand__text">CONFIGURATOR / XDRIVE</span>
+      </div>
+
+      <!-- Статичный «приборный» блок: значения подставляет app.js
+           по атрибуту [data-header-metric] (power | reliability | weight) -->
+      <div class="header-readout" aria-label="Сводные показатели">
+        <span class="header-readout__item">МОЩНОСТЬ <b class="header-readout__value" data-header-metric="power">—</b></span>
+        <span class="header-readout__item">НАДЁЖНОСТЬ <b class="header-readout__value" data-header-metric="reliability">—</b></span>
+        <span class="header-readout__item">ВЕС <b class="header-readout__value" data-header-metric="weight">—</b></span>
+      </div>
+
       <button class="btn-reset" id="resetBtn" type="button">Сбросить</button>
     </header>
 
+    <!-- ===================== ТЕЛО ===================== -->
     <main class="app__body">
-      <!-- ЛЕВАЯ ЗОНА: схема автомобиля -->
-      <section class="stage" aria-label="Схема автомобиля">
-        <svg class="car" viewBox="0 0 800 380" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Интерактивная схема автомобиля, вид сбоку">
-          <!-- НЕИНТЕРАКТИВНЫЙ КУЗОВ: контуры, стекло, порог/подвеска, земля -->
-          <g id="body" aria-hidden="true">
-            <path class="car__ground" d="M 60 350 L 740 350" fill="none" />
-            <path class="car__outline" d="M 90 272 L 90 228 L 118 208 L 300 192 L 366 116 L 486 116 L 560 194 L 672 198 L 706 232 L 712 272 Z" fill="none" />
-            <path class="car__arch" d="M 168 272 A 72 72 0 0 1 312 272" fill="none" />
-            <path class="car__arch" d="M 528 272 A 72 72 0 0 1 672 272" fill="none" />
-            <path class="car__glass" d="M 312 196 L 372 126 L 480 126 L 552 194" fill="none" />
-            <path class="car__glass" d="M 426 126 L 426 194" fill="none" />
-            <path class="car__sill" d="M 104 288 L 178 288" fill="none" />
-            <path class="car__sill" d="M 314 288 L 524 288" fill="none" />
-            <path class="car__sill" d="M 662 288 L 696 288" fill="none" />
+
+      <!-- ---------- ЛЕВАЯ КОЛОНКА: чертёж ---------- -->
+      <section class="stage" aria-label="Технический чертёж автомобиля">
+        <!--
+          СИСТЕМА КООРДИНАТ SVG: viewBox 0 0 1000 470.
+          Автомобиль смотрит ВЛЕВО: передок ≈ x=120, корма ≈ x=900.
+          Колёса: центр (250, 352) и (790, 352), покрышка R=70, диск R=44.
+          Опорная плоскость (земля) — пунктир на y≈430.
+          Несущая линия кузова: крыша y≈120…130, порог (нижняя кромка) y≈330.
+          Все цвета задаёт CSS (fill="none" + классы), в разметке только геометрия.
+        -->
+        <svg class="car" viewBox="0 0 1000 470" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Технический чертёж автомобиля, вид сбоку">
+
+          <!-- ===== Чертёжная обвязка: земля, осевая, базовая размерная линия ===== -->
+          <g class="car__legend" aria-hidden="true">
+            <!-- Опорная линия (дата) — пунктир -->
+            <path class="car__ground" d="M 40 430 L 960 430" fill="none" stroke-dasharray="16 8" stroke-width="0.8" />
+            <!-- Штриховка под землёй -->
+            <path class="car__ground" d="M 60 430 l -9 9 M 116 430 l -9 9 M 172 430 l -9 9 M 228 430 l -9 9 M 284 430 l -9 9 M 340 430 l -9 9 M 396 430 l -9 9 M 452 430 l -9 9 M 508 430 l -9 9 M 564 430 l -9 9 M 620 430 l -9 9 M 676 430 l -9 9 M 732 430 l -9 9 M 788 430 l -9 9 M 844 430 l -9 9 M 900 430 l -9 9 M 956 430 l -9 9" fill="none" stroke-width="0.6" />
+            <!-- Осевая (центральная линия) колёс — штрих-пунктир -->
+            <path class="car__datum" d="M 40 352 L 960 352" fill="none" stroke-dasharray="18 5 3 5" stroke-width="0.6" />
+            <!-- Размерная линия «колёсная база» (только геометрия, без подписей) -->
+            <path class="car__datum" d="M 250 430 L 250 452 M 790 430 L 790 452 M 250 450 L 790 450" fill="none" stroke-width="0.7" />
+            <path class="car__datum" d="M 244 444 L 256 456 M 784 444 L 796 456" fill="none" stroke-width="0.7" />
+            <!-- Вертикальные выносные линии передней и задней оси -->
+            <path class="car__datum" d="M 120 336 L 120 396 M 886 330 L 886 396" fill="none" stroke-dasharray="4 4" stroke-width="0.5" />
           </g>
 
-          <!-- 1. ДВИГАТЕЛЬ: моторный отсек, перед-низ слева (x 94–164, y 200–270) -->
-          <g id="engine" class="car__module" data-module="engine" tabindex="0" role="button" aria-label="Двигатель">
-            <rect class="car__hit" x="94" y="200" width="70" height="70" />
-            <g class="car__part">
-              <rect x="98" y="206" width="60" height="58" rx="5" fill="none" />
-              <path d="M 106 216 L 150 216" fill="none" />
-              <path d="M 106 228 L 150 228" fill="none" />
-              <path d="M 106 240 L 150 240" fill="none" />
-              <circle cx="128" cy="254" r="7" fill="none" />
+          <!-- ===== НЕИНТЕРАКТИВНЫЙ КУЗОВ: силуэт, стекло, арки, колёса, мелочь ===== -->
+          <g id="car-body" aria-hidden="true">
+
+            <!-- Основной силуэт: длинный капот (x 124→356, y 266→198),
+                 наклонное лобовое стекло (356→474, y 198→126),
+                 «фастбэк»-крыша (474→606, y 126→128), короткий хвост (750→886). -->
+            <path class="car__outline" stroke-width="1.6" fill="none" d="M 122 342
+              C 116 318 116 290 124 266
+              C 132 244 152 234 184 228
+              C 252 216 312 206 356 198
+              C 400 158 438 132 474 126
+              C 522 118 578 118 606 128
+              C 662 150 716 174 750 194
+              C 802 202 858 212 876 238
+              C 886 254 890 282 886 300
+              L 884 330
+              L 640 330
+              L 330 330
+              C 256 328 176 336 122 342 Z" />
+
+            <!-- Подштамповка борта / линия плеча (по всей длине кузова) -->
+            <path class="car__outline" stroke-width="0.8" fill="none" d="M 150 262 C 320 232 520 238 716 262 C 792 272 852 278 880 284" />
+            <!-- Линия подоконника (низ остекления) -->
+            <path class="car__glass" stroke-width="0.9" fill="none" d="M 356 200 C 460 210 600 210 750 198" />
+            <!-- Порог / боковой порог между арками (x 323…717) -->
+            <path class="car__sill" stroke-width="0.9" fill="none" d="M 336 318 L 634 318" />
+            <path class="car__sill" stroke-width="0.6" fill="none" d="M 344 312 L 626 312" />
+            <!-- Передний обтекатель (сплиттер) -->
+            <path class="car__sill" stroke-width="0.8" fill="none" d="M 122 334 L 178 328 L 178 334 L 124 342 Z" />
+            <!-- Задний диффузор с вертикальными рёбрами -->
+            <path class="car__sill" stroke-width="0.8" fill="none" d="M 660 330 L 716 330 L 716 344 L 660 344 Z" />
+            <path class="car__sill" stroke-width="0.8" fill="none" d="M 862 330 L 886 330 L 886 344 L 862 342 Z" />
+            <path class="car__sill" stroke-width="0.6" fill="none" d="M 678 330 L 678 344 M 696 330 L 696 344" />
+            <!-- Линия разреза двери (стойка B, x≈508, с лёгким изгибом) -->
+            <path class="car__outline" stroke-width="0.7" fill="none" d="M 508 132 C 505 200 510 254 514 322" />
+            <!-- Передняя граница двери у основания стойки A -->
+            <path class="car__outline" stroke-width="0.7" fill="none" d="M 366 202 C 372 236 374 280 372 318" />
+
+            <!-- Лобовое стекло (наклонная полоса) -->
+            <path class="car__glass" stroke-width="0.9" fill="none" d="M 348 200 C 396 156 438 132 472 126 L 482 130 C 448 140 408 168 360 202 Z" />
+            <!-- Переднее боковое стекло двери (x 388…508) -->
+            <path class="car__glass" stroke-width="0.9" fill="none" d="M 388 199 L 480 133 C 490 130 500 130 508 131 L 508 202 C 470 206 420 204 388 199 Z" />
+            <!-- Задняя форточка (x 522…722) -->
+            <path class="car__glass" stroke-width="0.9" fill="none" d="M 522 132 L 590 129 C 628 148 686 176 722 197 C 660 204 580 205 522 203 Z" />
+
+            <!-- Колёсные арки: R=78 вокруг центров (250,352) и (790,352);
+                 точки стыковки лежат на линии порога y=330 -->
+            <path class="car__arch" stroke-width="1.2" fill="none" d="M 177 330 A 78 78 0 0 0 323 330" />
+            <path class="car__arch" stroke-width="1.2" fill="none" d="M 717 330 A 78 78 0 0 0 863 330" />
+
+            <!-- ===== КОЛЁСА: покрышка R=70, диск R=44, ступица R=12, 6 спиц ===== -->
+            <g class="car__tyre">
+              <circle cx="250" cy="352" r="70" fill="none" stroke-width="1.4" />
+              <circle cx="250" cy="352" r="63" fill="none" stroke-width="0.5" />
+              <circle cx="250" cy="352" r="44" fill="none" stroke-width="1" />
+              <circle cx="250" cy="352" r="12" fill="none" stroke-width="0.9" />
+              <!-- спицы -->
+              <path fill="none" stroke-width="0.8" d="M 263 352 L 292 352 M 256.5 363.3 L 271 388.4 M 243.5 363.3 L 229 388.4 M 237 352 L 208 352 M 243.5 340.7 L 229 315.6 M 256.5 340.7 L 271 315.6" />
+              <!-- тормозной диск и суппорт (базовый вариант) -->
+              <circle cx="250" cy="352" r="34" fill="none" stroke-width="0.6" />
+              <circle cx="250" cy="352" r="20" fill="none" stroke-width="0.5" />
+              <rect x="234" y="308" width="26" height="11" rx="3" fill="none" stroke-width="0.8" />
+            </g>
+            <g class="car__tyre">
+              <circle cx="790" cy="352" r="70" fill="none" stroke-width="1.4" />
+              <circle cx="790" cy="352" r="63" fill="none" stroke-width="0.5" />
+              <circle cx="790" cy="352" r="44" fill="none" stroke-width="1" />
+              <circle cx="790" cy="352" r="12" fill="none" stroke-width="0.9" />
+              <path fill="none" stroke-width="0.8" d="M 803 352 L 832 352 M 796.5 363.3 L 811 388.4 M 783.5 363.3 L 769 388.4 M 777 352 L 748 352 M 783.5 340.7 L 769 315.6 M 796.5 340.7 L 811 315.6" />
+              <circle cx="790" cy="352" r="34" fill="none" stroke-width="0.6" />
+              <circle cx="790" cy="352" r="20" fill="none" stroke-width="0.5" />
+              <rect x="774" y="308" width="26" height="11" rx="3" fill="none" stroke-width="0.8" />
+            </g>
+
+            <!-- ===== МЕЛОЧЬ: ручка, зеркало, воздухозабор, выхлопной патрубок, дуга, люк ===== -->
+            <g class="car__detail" fill="none" stroke-width="0.8">
+              <!-- дверная ручка -->
+              <rect x="520" y="228" width="34" height="7" rx="3.5" />
+              <!-- боковое зеркало на ножке -->
+              <path d="M 386 186 L 376 180 L 356 180 L 356 172 L 380 172 L 390 178" />
+              <!-- боковой воздухозабор перед задней аркой -->
+              <path d="M 660 236 C 690 230 712 232 722 240 L 722 250 C 706 244 686 244 662 250 Z" />
+              <!-- выхлопной патрубок (сзади) -->
+              <path d="M 880 396 C 892 396 896 402 896 410 C 896 418 890 422 880 422" />
+              <circle cx="878" cy="409" r="8" />
+              <!-- спортивная дуга / стойка над крышей (у основания задней стойки) -->
+              <path d="M 596 128 C 604 120 618 118 626 124" />
+              <!-- лючок топливного бака -->
+              <circle cx="712" cy="252" r="9" />
+              <!-- скрытые (штриховые) конструктивные линии: осевая мотора и картера -->
+              <path stroke-dasharray="6 5" stroke-width="0.6" d="M 40 214 L 960 214" opacity="0.45" />
+              <path stroke-dasharray="6 5" stroke-width="0.6" d="M 40 246 L 960 246" opacity="0.45" />
+              <path stroke-dasharray="4 4" stroke-width="0.5" opacity="0.35" d="M 500 110 L 500 340" />
             </g>
           </g>
 
-          <!-- 2. ПОДВЕСКА: рычаги у колёс и пружины между колёсами снизу (x 296–514, y 282–342) -->
-          <g id="suspension" class="car__module" data-module="suspension" tabindex="0" role="button" aria-label="Подвеска">
-            <rect class="car__hit" x="296" y="282" width="218" height="60" />
-            <g class="car__part">
-              <path d="M 302 290 L 332 300 L 302 310" fill="none" />
-              <path d="M 302 322 L 332 300" fill="none" />
-              <path d="M 508 290 L 478 300 L 508 310" fill="none" />
-              <path d="M 508 322 L 478 300" fill="none" />
-              <path d="M 332 300 L 478 300" fill="none" />
-              <path d="M 392 288 L 384 296 L 400 304 L 384 312 L 400 320 L 384 328 L 392 334" fill="none" />
-              <path d="M 452 288 L 444 296 L 460 304 L 444 312 L 460 320 L 444 328 L 452 334" fill="none" />
+          <!-- ===================== ИНТЕРАКТИВНЫЕ ЗОНЫ =====================
+               app.js: g[data-zone] — переключает класс .active
+               Порядок внутри группы: .car__hit (клик) → .car__part (видимый чертёж) → .car__tag
+               Прямоугольники .car__hit НЕ пересекаются между собой. -->
+
+          <!-- 01. МОТОРНЫЙ ОТСЕК — x 128…332, y 182…276 (передок, над передней осью) -->
+          <g id="engine-bay" class="car__zone" data-zone="engine-bay" tabindex="0" role="button" aria-label="Моторный отсек — Двигатель">
+            <rect class="car__hit" x="128" y="182" width="204" height="94" fill="none" pointer-events="all" />
+            <g class="car__part" fill="none">
+              <!-- Радиатор/интеркулер (x 132…148) с вертикальными рёбрами -->
+              <rect x="132" y="200" width="16" height="64" rx="2" stroke-width="0.9" />
+              <path stroke-width="0.5" d="M 137 205 L 137 259 M 142 205 L 142 259" />
+              <path stroke-width="0.6" d="M 132 208 L 148 208 M 132 256 L 148 256" />
+              <!-- Головка блока (x 154…286, y 196…207) с 4 гнёздами свечей -->
+              <rect x="154" y="196" width="132" height="11" rx="2" stroke-width="1" />
+              <circle cx="170" cy="201.5" r="3.2" stroke-width="0.7" />
+              <circle cx="203" cy="201.5" r="3.2" stroke-width="0.7" />
+              <circle cx="236" cy="201.5" r="3.2" stroke-width="0.7" />
+              <circle cx="269" cy="201.5" r="3.2" stroke-width="0.7" />
+              <path stroke-width="0.5" d="M 186 197 L 186 206 M 219 197 L 219 206 M 252 197 L 252 206 M 285 197 L 285 206" />
+              <!-- 4 впускных патрубка от головки к рессиверу -->
+              <path stroke-width="0.8" d="M 170 207 C 165 209 165 212 170 214 M 203 207 C 198 209 198 212 203 214 M 236 207 C 231 209 231 212 236 214 M 269 207 C 264 209 264 212 269 214" />
+              <!-- Ресивер (дросселирующий узел) -->
+              <rect x="152" y="214" width="136" height="11" rx="5" stroke-width="0.9" />
+              <!-- Блок цилиндров (x 162…278, y 228…258) с пунктирным сечением поршней -->
+              <rect x="162" y="228" width="116" height="30" rx="3" stroke-width="1.1" />
+              <g stroke-dasharray="3 2.5" stroke-width="0.5">
+                <path d="M 170 233 h 18 v 14 h -18 Z" />
+                <path d="M 203 233 h 18 v 14 h -18 Z" />
+                <path d="M 236 233 h 18 v 14 h -18 Z" />
+                <path d="M 269 233 h 18 v 14 h -18 Z" />
+              </g>
+              <path stroke-width="0.5" d="M 179 247 L 179 256 M 212 247 L 212 256 M 245 247 L 245 256 M 278 247 L 278 256" />
+              <!-- Масляный поддон -->
+              <path d="M 170 258 L 270 258 L 258 272 L 182 272 Z" stroke-width="0.9" />
+              <!-- Турбина ( улитка + нагнетательный корпус, x 290…325) -->
+              <circle cx="300" cy="202" r="10" stroke-width="0.9" />
+              <circle cx="318" cy="202" r="6" stroke-width="0.9" />
+              <circle cx="300" cy="202" r="3.4" stroke-width="0.7" />
+              <path stroke-width="0.7" d="M 290 202 C 290 194 302 192 306 200" />
+              <path stroke-width="0.7" d="M 306 206 C 312 214 310 224 304 230" />
+              <!-- Шкив + генератор (ременная передача) -->
+              <circle cx="310" cy="222" r="12" stroke-width="0.9" />
+              <circle cx="310" cy="222" r="4" stroke-width="0.7" />
+              <path stroke-width="0.6" d="M 299 212 C 293 216 293 228 299 233" />
+              <!-- Выпускной коллектор: 4 впускных трубы в общий collector -->
+              <path stroke-width="0.9" d="M 278 234 C 292 234 296 244 302 252 C 305 257 309 260 312 262" />
+              <path stroke-width="0.9" d="M 278 242 C 288 242 292 250 298 256 C 302 260 308 262 312 264" />
+              <path stroke-width="0.8" d="M 278 250 C 286 250 288 255 294 259" />
+              <path stroke-width="0.8" d="M 278 258 C 284 258 286 261 292 263" />
+              <circle cx="314" cy="265" r="5" stroke-width="0.9" />
+              <path stroke-width="0.9" d="M 314 270 L 314 274" />
+              <!-- Линия разреза капота (показывает, что мотор «виден» сквозь кузов) -->
+              <path stroke-dasharray="7 5" stroke-width="0.6" opacity="0.6" d="M 132 244 C 140 236 160 230 200 224 C 260 214 312 206 352 198" />
+              <!-- Скрытые линии сечения (штриховые) -->
+              <path stroke-dasharray="5 4" stroke-width="0.5" opacity="0.5" d="M 136 214 L 330 214 M 136 243 L 330 243" />
             </g>
+            <text class="car__tag" x="134" y="272" font-size="10">01 · ПОРОШНЕВОЙ БЛОК</text>
           </g>
 
-          <!-- 3. КОЛЁСА: оба колеса, окружности со спицами.
-               hit — ПОЛНЫЙ диск r 54 на каждое колесо, без дырки в центре:
-               центр-ступица (r < 15) кликабельна как «Колёса», а зона
-               диска перекрывается кольцом #brakes (оно ниже в DOM). -->
-          <g id="wheels" class="car__module" data-module="wheels" tabindex="0" role="button" aria-label="Колёса">
-            <circle class="car__hit" cx="240" cy="296" r="54" />
-            <circle class="car__hit" cx="600" cy="296" r="54" />
-            <g class="car__part">
-              <circle cx="240" cy="296" r="54" fill="none" />
-              <circle cx="600" cy="296" r="54" fill="none" />
-              <circle cx="240" cy="296" r="32" fill="none" />
-              <circle cx="600" cy="296" r="32" fill="none" />
-              <circle cx="240" cy="296" r="9" fill="none" />
-              <circle cx="600" cy="296" r="9" fill="none" />
-              <path d="M 250 296 L 270 296 M 243 306 L 249 325 M 232 302 L 216 314 M 232 290 L 216 278 M 243 286 L 249 267" fill="none" />
-              <path d="M 610 296 L 630 296 M 603 306 L 609 325 M 592 302 L 576 314 M 592 290 L 576 278 M 603 286 L 609 267" fill="none" />
+          <!-- 03. ПЕРЕДНЯЯ ПОДВЕСКА И ТОРМОЗА — x 164…346, y 280…430 (над передней осью 250,352) -->
+          <g id="front-chassis" class="car__zone" data-zone="front-chassis" tabindex="0" role="button" aria-label="Передняя подвеска — Тормоза">
+            <rect class="car__hit" x="164" y="280" width="182" height="150" fill="none" pointer-events="all" />
+            <g class="car__part" fill="none">
+              <!-- Стойка (амортизатор) + винтовая пружина: верх (296,288) → низ (322,352) -->
+              <path stroke-width="1.1" d="M 296 288 L 322 352" />
+              <path stroke-width="0.7" d="M 306 296 L 314 350" />
+              <path stroke-width="0.9" d="M 292 292 L 304 300 L 296 308 L 308 316 L 300 324 L 312 332 L 304 340 L 316 348" />
+              <circle cx="296" cy="288" r="5" stroke-width="0.8" />
+              <circle cx="322" cy="352" r="5" stroke-width="0.8" />
+              <!-- Верхний рычаг (A-образный): два шарнира на кузове → шарнир ступицы -->
+              <path stroke-width="0.9" d="M 272 300 L 250 312 L 274 320 Z" />
+              <!-- Нижний рычаг -->
+              <path stroke-width="0.9" d="M 274 352 L 250 332 L 276 372 Z" />
+              <!-- Ступица/поворотный кулак -->
+              <path stroke-width="1" d="M 250 306 L 250 366" />
+              <path stroke-width="0.7" d="M 244 314 L 256 314 M 244 358 L 256 358" />
+              <circle cx="250" cy="312" r="3.2" stroke-width="0.7" />
+              <circle cx="250" cy="332" r="3.2" stroke-width="0.7" />
+              <circle cx="250" cy="352" r="9" stroke-width="0.9" />
+              <!-- Рулевая тяга (реека → кулак) -->
+              <path stroke-width="0.9" d="M 250 336 L 296 344" />
+              <rect x="286" y="339" width="14" height="9" rx="2" stroke-width="0.8" />
+              <!-- Стабилизазатор поперечной устойчивости + стойка стабилизазатора -->
+              <path stroke-width="0.9" d="M 208 316 C 208 344 220 350 236 344" />
+              <path stroke-width="0.8" d="M 236 344 L 244 336" />
+              <!-- Вентилируемый тормозной диск: кольцо R=42/30 с рёбрами -->
+              <path fill-rule="evenodd" stroke-width="0.9" d="M 250 310 a 42 42 0 1 0 0.1 0 Z M 250 322 a 30 30 0 1 1 -0.1 0 Z" />
+              <path stroke-width="0.5" d="M 266 335 L 276 344 M 276 350 L 264 350 M 262 368 L 272 360 M 236 368 L 240 358 M 226 350 L 238 350 M 238 335 L 244 342" />
+              <circle cx="250" cy="352" r="14" stroke-width="0.7" />
+              <circle cx="250" cy="352" r="5" stroke-width="0.7" />
+              <!-- Суппорт с двумя поршнями -->
+              <rect x="236" y="302" width="28" height="15" rx="3" stroke-width="1" />
+              <circle cx="243" cy="322" r="3.4" stroke-width="0.7" />
+              <circle cx="257" cy="322" r="3.4" stroke-width="0.7" />
+              <path stroke-width="0.6" d="M 236 309 L 264 309" />
             </g>
+            <text class="car__tag" x="170" y="426" font-size="10">03 · ПЕРЕДНЯЯ ПОДВЕСКА И ТОРМОЗА</text>
           </g>
 
-          <!-- 4. ТОРМОЗА: диски и суппорты у обоих колёс.
-               hit — кольцо fill-rule="evenodd" вокруг центра: внешний r 27
-               (накрывает нарисованный диск r 25 и пальцы суппорта),
-               внутренний r 15 (оставляет ступицу и спицы за «Колёсами»).
-               Итоговые зоны: r < 15 → колёса, 15…27 → тормоза, r > 27 → колёса. -->
-          <g id="brakes" class="car__module" data-module="brakes" tabindex="0" role="button" aria-label="Тормоза">
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 213 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 225 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
-            <path class="car__hit" fill-rule="evenodd"
-                  d="M 573 296 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0 Z M 585 296 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z" />
-            <g class="car__part">
-              <circle cx="240" cy="296" r="25" fill="none" />
-              <circle cx="600" cy="296" r="25" fill="none" />
-              <circle cx="240" cy="296" r="11" fill="none" />
-              <circle cx="600" cy="296" r="11" fill="none" />
-              <path d="M 218 283 L 236 271 M 222 290 L 240 278" fill="none" />
-              <path d="M 578 283 L 596 271 M 582 290 L 600 278" fill="none" />
+          <!-- 02. ТРАНСМИССИЯ И СЦЕПЛЕНИЕ — x 350…642, y 250…400 (низ-центр) -->
+          <g id="transmission-bay" class="car__zone" data-zone="transmission-bay" tabindex="0" role="button" aria-label="Трансмиссия — Сцепление и КПП">
+            <rect class="car__hit" x="350" y="250" width="292" height="150" fill="none" pointer-events="all" />
+            <g class="car__part" fill="none">
+              <!-- Маховик (R=40) и картер сцепления / колокол (дуга R=46) -->
+              <circle cx="412" cy="316" r="46" stroke-width="0.9" stroke-dasharray="7 4" />
+              <circle cx="412" cy="316" r="40" stroke-width="1" />
+              <!-- Диск сцепления и прижимная корзина (концентрические окружности) -->
+              <circle cx="412" cy="316" r="32" stroke-width="0.9" />
+              <circle cx="412" cy="316" r="27" stroke-width="0.8" />
+              <circle cx="412" cy="316" r="9" stroke-width="0.8" />
+              <!-- Зубья диска — радиальные засечки -->
+              <path stroke-width="0.6" d="M 412 284 L 412 289 M 444 316 L 439 316 M 412 348 L 412 343 M 380 316 L 385 316 M 435 293 L 432 296 M 435 339 L 432 336 M 389 339 L 392 336 M 389 293 L 392 296" />
+              <!-- Пружины прижимной корзины (диагонали) -->
+              <path stroke-width="0.5" d="M 420 288 L 404 300 M 440 308 L 420 320 M 428 340 L 412 328 M 396 330 L 404 344" />
+              <!-- Коробка передач: ступенчатый профиль (x 430…600) -->
+              <path stroke-width="1.1" d="M 434 286 L 470 280 L 500 292 L 556 300 L 596 318 L 600 348 L 548 360 L 466 354 L 434 340 Z" />
+              <!-- Рычаг переключения передач + наконечник -->
+              <path stroke-width="0.9" d="M 470 288 L 462 262" />
+              <circle cx="460" cy="260" r="5" stroke-width="0.8" />
+              <path stroke-width="0.5" d="M 458 250 L 486 250" />
+              <!-- Вал главной передачи назад к заднему мосту (x 596…636) -->
+              <path stroke-width="1" d="M 596 336 L 630 344" />
+              <circle cx="630" cy="344" r="4" stroke-width="0.8" />
+              <!-- Шарнир равных угловых скоростей (воронка + сечение) -->
+              <path stroke-width="0.9" d="M 600 330 L 612 326 L 620 338 L 608 342 Z" />
+              <path stroke-width="0.5" d="M 606 328 L 614 340 M 600 330 L 608 342" />
+              <circle cx="630" cy="344" r="10" stroke-width="0.6" stroke-dasharray="4 3" />
+              <!-- Зубчатые колёса: окружности с радиальными засечками -->
+              <circle cx="500" cy="322" r="18" stroke-width="0.8" />
+              <path stroke-width="0.5" d="M 500 304 L 500 308 M 518 322 L 514 322 M 500 340 L 500 336 M 482 322 L 486 322" />
+              <circle cx="548" cy="330" r="13" stroke-width="0.8" />
+              <path stroke-width="0.5" d="M 548 317 L 548 320 M 561 330 L 558 330 M 548 343 L 548 340 M 535 330 L 538 330" />
+              <!-- Скрытые линии вала и картера -->
+              <path stroke-dasharray="5 4" stroke-width="0.5" opacity="0.5" d="M 360 316 L 636 316" />
             </g>
+            <text class="car__tag" x="356" y="396" font-size="10">02 · ТРАНСМИССИЯ И СЦЕПЛЕНИЕ</text>
           </g>
+
+          <!-- 04. ЗАДНЯЯ ПОДВЕСКА И ВЫХЛОП — x 700…902, y 250…430 (над задней осью 790,352) -->
+          <g id="rear-chassis" class="car__zone" data-zone="rear-chassis" tabindex="0" role="button" aria-label="Задняя подвеска — Выхлоп">
+            <rect class="car__hit" x="700" y="250" width="202" height="180" fill="none" pointer-events="all" />
+            <g class="car__part" fill="none">
+              <!-- Подрамник (две платформы, x 706…760) -->
+              <path stroke-width="0.9" d="M 706 292 L 758 284 L 758 300 L 706 308 Z" />
+              <path stroke-width="0.9" d="M 706 372 L 758 364 L 758 380 L 706 388 Z" />
+              <!-- Стойка с пружиной (верх 762,296 → низ 742,352) -->
+              <path stroke-width="1" d="M 762 296 L 742 352" />
+              <path stroke-width="0.8" d="M 758 298 L 750 300 L 758 310 L 750 312 L 758 322 L 750 324 L 758 334 L 750 336 L 756 344" />
+              <!-- Многорычажная подвеска: верхний рычаг, нижний, тяга схождения, кулак -->
+              <path stroke-width="0.9" d="M 736 306 L 786 318 L 738 332 Z" />
+              <path stroke-width="0.9" d="M 730 366 L 786 340 L 742 382 Z" />
+              <path stroke-width="0.8" d="M 786 350 L 754 386" />
+              <path stroke-width="0.9" d="M 790 314 L 790 348" />
+              <circle cx="790" cy="316" r="3" stroke-width="0.7" />
+              <circle cx="790" cy="340" r="3" stroke-width="0.7" />
+              <!-- Дифференциал с главной парой: ведущая шестерня (коронка) R=26 и сателлит R=11 -->
+              <circle cx="790" cy="352" r="26" stroke-width="1" />
+              <circle cx="790" cy="352" r="11" stroke-width="0.8" />
+              <path stroke-width="0.5" d="M 790 326 L 790 330 M 816 352 L 812 352 M 790 378 L 790 374 M 764 352 L 768 352 M 809 333 L 807 335 M 809 371 L 807 369 M 771 371 L 773 369 M 771 333 L 773 335" />
+              <!-- Шестерня главной передачи (пинён) + привод от КПП -->
+              <circle cx="750" cy="336" r="9" stroke-width="0.9" />
+              <path stroke-width="0.5" d="M 750 327 L 750 330 M 756.4 329.6 L 754.2 331.8 M 759 336 L 756 336 M 756.4 342.4 L 754.2 340.2 M 750 345 L 750 342 M 743.6 342.4 L 745.8 340.2 M 741 336 L 744 336 M 743.6 329.6 L 745.8 331.8" />
+              <path stroke-width="1" d="M 706 330 L 740 334" />
+              <!-- Полуоси к ступицам -->
+              <path stroke-width="1" d="M 762 352 L 786 352 M 794 352 L 818 352" />
+              <path stroke-width="0.8" d="M 762 352 L 756 346 L 762 340 M 818 352 L 824 346 L 818 340" />
+              <!-- Задний тормозной диск и суппорт -->
+              <path fill-rule="evenodd" stroke-width="0.9" d="M 790 310 a 42 42 0 1 0 0.1 0 Z M 790 322 a 30 30 0 1 1 -0.1 0 Z" />
+              <rect x="776" y="300" width="28" height="15" rx="3" stroke-width="1" />
+              <circle cx="783" cy="320" r="3.4" stroke-width="0.7" />
+              <circle cx="797" cy="320" r="3.4" stroke-width="0.7" />
+              <!-- Выхлопной коллектор → резонатор → патрубок -->
+              <path stroke-width="0.9" d="M 736 372 C 740 388 760 392 784 394" />
+              <rect x="784" y="390" width="86" height="24" rx="10" stroke-width="1" />
+              <path stroke-width="0.6" d="M 800 392 L 800 412 M 852 392 L 852 412" />
+              <circle cx="878" cy="402" r="7" stroke-width="0.9" />
+            </g>
+            <text class="car__tag" x="706" y="426" font-size="10">04 · ЗАДНЯЯ ПОДВЕСКА И ВЫХЛОП</text>
+          </g>
+
+          <!-- 05. ЭЛЕКТРОНИКА И САЛОН — x 380…720, y 126…244 (надстройка и зона салона) -->
+          <g id="ecu-cabin" class="car__zone" data-zone="ecu-cabin" tabindex="0" role="button" aria-label="Электроника и салон — Блок управления двигателем">
+            <rect class="car__hit" x="380" y="126" width="340" height="118" fill="none" pointer-events="all" />
+            <g class="car__part" fill="none">
+              <!-- Торпедо с козырьком приборов -->
+              <path stroke-width="1" d="M 392 214 C 420 200 470 194 520 196 L 566 204" />
+              <path stroke-width="0.8" d="M 430 202 C 442 194 470 190 492 194" />
+              <circle cx="452" cy="199" r="9" stroke-width="0.7" />
+              <!-- Рулевое колесо: обод R=22, ступица, 3 спицы -->
+              <circle cx="470" cy="216" r="22" stroke-width="1.1" />
+              <circle cx="470" cy="216" r="5" stroke-width="0.8" />
+              <path stroke-width="0.8" d="M 470 211 L 470 196 M 466 219 L 455 229 M 474 219 L 485 229" />
+              <path stroke-width="0.6" d="M 470 194 L 470 238 M 448 216 L 492 216" stroke-dasharray="4 3" />
+              <!-- Рычаг КПП в тоннеле -->
+              <path stroke-width="0.9" d="M 516 232 L 522 202" />
+              <circle cx="523" cy="200" r="4.5" stroke-width="0.8" />
+              <!-- Центральная консоль с блоком ECU (x 496…572, y 212…238) -->
+              <path stroke-width="0.9" d="M 490 238 L 490 214 L 572 212 L 572 238 Z" />
+              <rect x="500" y="218" width="46" height="14" rx="2" stroke-width="0.9" />
+              <path stroke-width="0.5" d="M 506 218 L 506 232 M 512 218 L 512 232 M 518 218 L 518 232 M 524 218 L 524 232 M 530 218 L 530 232 M 536 218 L 536 232" />
+              <!-- Расширительный разъём / блок предохранителей -->
+              <rect x="552" y="217" width="14" height="16" rx="2" stroke-width="0.7" />
+              <!-- Профиль сиденья и спинка -->
+              <path stroke-width="1" d="M 578 238 L 578 200 C 578 188 592 184 602 190 L 620 202" />
+              <path stroke-width="0.9" d="M 620 202 L 656 204 L 656 238 L 620 236 Z" />
+              <path stroke-width="0.5" d="M 584 196 L 610 210" />
+              <!-- Жгут проводки: от торпедо к консоли и назад -->
+              <path stroke-width="0.7" d="M 400 220 C 420 234 450 238 488 236" />
+              <path stroke-width="0.7" d="M 574 230 C 620 236 660 232 700 220" />
+              <path stroke-width="0.7" d="M 470 200 C 500 190 560 188 620 196" />
+              <!-- Шина CAN: 4 узла в цепочку (y=142) -->
+              <path stroke-width="0.7" d="M 402 142 L 706 142" />
+              <circle cx="424" cy="142" r="8" stroke-width="0.8" />
+              <circle cx="500" cy="142" r="8" stroke-width="0.8" />
+              <circle cx="580" cy="142" r="8" stroke-width="0.8" />
+              <circle cx="660" cy="142" r="8" stroke-width="0.8" />
+              <path stroke-width="0.5" d="M 420 142 L 428 142 M 496 142 L 504 142 M 576 142 L 584 142 M 656 142 L 664 142" />
+              <path stroke-width="0.5" d="M 424 138 L 424 146 M 500 138 L 500 146 M 580 138 L 580 146 M 660 138 L 660 146" />
+              <!-- Скрытые линии проводки под порогом -->
+              <path stroke-dasharray="5 4" stroke-width="0.5" opacity="0.5" d="M 386 232 L 714 232" />
+            </g>
+            <text class="car__tag" x="386" y="240" font-size="10">05 · ЭЛЕКТРОНИКА И САЛОН</text>
+          </g>
+
         </svg>
+
+        <!-- Подсказка под чертёжом -->
         <div class="stage__hint">Нажмите на узел схемы, чтобы перейти к его настройке</div>
+
+        <!-- Легенда нумерации зон на чертеже (чисто презентационная) -->
+        <div class="stage__legend" aria-hidden="true">
+          <span class="stage__legend-key">01</span> Моторный отсек
+          <span class="stage__legend-key">02</span> Трансмиссия и сцепление
+          <span class="stage__legend-key">03</span> Передняя подвеска и тормоза
+          <span class="stage__legend-key">04</span> Задняя подвеска и выхлоп
+          <span class="stage__legend-key">05</span> Электроника и салон
+        </div>
       </section>
 
-      <!-- ПРАВАЯ ЗОНА: панель тюнинга -->
-      <section class="panel" id="panel" aria-label="Панель тюнинга">
+      <!-- ---------- ПРАВАЯ КОЛОНКА: панель тюнинга ---------- -->
+      <section class="panel" id="panel" aria-label="Панель настройки">
         <div class="panel__head">
           <button class="accordion-toggle" id="accordionToggle" type="button" aria-expanded="true" aria-controls="panelBody">
             <span class="accordion-toggle__label">Настройка</span>
             <span class="accordion-toggle__icon" aria-hidden="true"></span>
           </button>
         </div>
+
         <div class="panel__body" id="panelBody">
-          <div class="modules" id="modules"><!-- 4 .module генерируются из PartsDB в JS --></div>
-          <div class="stats" id="stats"><!-- 4 .stat генерируются из METRICS в JS --></div>
+          <!-- 1. Вкладки узлов (5 штук строит JS) -->
+          <div class="tabs" id="tabs" role="tablist" aria-label="Узлы автомобиля"></div>
+
+          <!-- 2. Панели узлов (5 штук строит JS) -->
+          <div class="panes" id="panes"></div>
+
+          <!-- 3. Штрафы/предупреждения (чипы рисует JS), блок видим по умолчанию -->
+          <div class="warnings" id="warnings" role="status" aria-live="polite"></div>
+
+          <!-- 4. Метрики (8 строк строит JS) -->
+          <div class="metrics" id="metrics"></div>
+
+          <!-- 5. Итоговая сводка (частично статика, значения обновляет JS) -->
           <footer class="summary">
-            <div class="summary__label">Итого</div>
-            <div class="summary__value" id="totalPrice">0 ₽</div>
+            <div class="summary__grid">
+              <div class="summary__cell">
+                <span class="summary__label">Бюджет</span>
+                <b class="summary__value" id="totalPrice">0 $</b>
+              </div>
+              <div class="summary__cell">
+                <span class="summary__label">Вес</span>
+                <b class="summary__value" id="totalWeight">—</b>
+              </div>
+              <div class="summary__cell">
+                <span class="summary__label">Мощность</span>
+                <b class="summary__value" id="totalPower">—</b>
+              </div>
+              <div class="summary__cell">
+                <span class="summary__label">Надёжность</span>
+                <b class="summary__value" id="totalReliability">—</b>
+              </div>
+            </div>
           </footer>
         </div>
       </section>
+
     </main>
   </div>
 </body>

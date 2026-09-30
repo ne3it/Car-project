@@ -1,8 +1,11 @@
 /* ============================================================
-   Конфигуратор автомобиля — тёмная тема, 100dvh, без скролла
-   Порядок секций: 1) токены  2) reset  3) раскладка
-   4) схема (SVG)  5) панель  6) мобильный брейкпоинт
-   7) prefers-reduced-motion
+   Конфигуратор автомобиля — минималистичный тёмный виджет
+   Порядок секций:
+     1) токены            6) предупреждения
+     2) reset / база      7) метрики
+     3) раскладка .app    8) итоговая сводка
+     4) шапка             9) аккордеон и брейкпоинты
+     5) схема (SVG)      10) доступность и движение
    ============================================================ */
 
 /* 1. ТОКЕНЫ --------------------------------------------------------- */
@@ -16,6 +19,16 @@
   --accent: #ff4d4d;
   --accent-soft: rgba(255, 77, 77, .16);
   --hover-fill: rgba(255, 255, 255, .05);
+  --good: #4ec98a;          /* приятный зелёный: улучшение характеристики */
+  --bad: #c0453f;           /* приглушённый красный, заметно темнее акцента */
+  --accent-line: rgba(255, 77, 77, .28);
+  --accent-wash: rgba(255, 77, 77, .07);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
+  --hair: 1px;
+  --mask: #000;                   /* альфа-стоп маски прокрутки */
+  --ease: cubic-bezier(.4, 0, .2, 1);
 }
 
 /* 2. RESET / БАЗА --------------------------------------------------- */
@@ -28,13 +41,31 @@ html { height: 100%; }
 body {
   margin: 0;
   height: 100dvh;
-  overflow: hidden;                 /* строго 100dvh без вертикального скролла */
+  overflow: hidden;                  /* строго 100dvh, без скролла страницы */
   background: var(--bg);
   color: var(--text);
   font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Числа во всех шкалах — табличные, чтобы полосы не «прыгали» */
+.header-readout__value,
+.metric__value,
+.metric__unit,
+.metric__label,
+.metric__note,
+.part__delta,
+.opt__price,
+.opt__label,
+.summary__value,
+.stage__legend-key,
+.pane__index,
+.tab__index {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 button {
@@ -43,6 +74,13 @@ button {
   border: 0;
   background: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* 3. РАСКЛАДКА ------------------------------------------------------ */
@@ -58,73 +96,111 @@ button {
 /* Шапка: фиксированная высота, не сжимается */
 .app__header {
   flex: none;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: clamp(12px, 2vw, 28px);
 }
 
+.app__body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 420px);
+  gap: clamp(12px, 1.6vw, 24px);
+  min-height: 0;                    /* критично: без этого появляется скроллбар */
+}
+
+/* 4. ШАПКА ---------------------------------------------------------- */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 9px;
+  flex: none;
+  min-width: 0;
+}
+
+.brand__mark {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-soft);
+}
+
+.brand__text {
+  font-size: 10px;
   letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* «Приборный» блок: три статичных показателя [data-header-metric] */
+.header-readout {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: clamp(10px, 2vw, 26px);
+  margin-left: auto;
+  min-width: 0;
+}
+
+.header-readout__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
 }
 
-.brand__mark {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
+.header-readout__value {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  color: var(--text);
+  text-transform: none;
 }
 
 .btn-reset {
   flex: none;
   padding: 7px 14px;
-  border: 1px solid var(--line);
+  border: var(--hair) solid var(--line);
   border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
   color: var(--muted);
-  font-size: 12px;
-  letter-spacing: .06em;
-  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+  background: transparent;
+  transition: color .2s var(--ease), border-color .2s var(--ease), background-color .2s var(--ease);
 }
 
 .btn-reset:hover {
-  border-color: var(--muted);
   color: var(--text);
+  border-color: var(--muted);
   background: var(--hover-fill);
 }
 
-.btn-reset:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Основная область: две колонки. min-height:0 обязателен, иначе появится скролл */
-.app__body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 420px);
-  gap: clamp(16px, 2vw, 32px);
-}
-
-/* 4. СХЕМА (SVG) ---------------------------------------------------- */
+/* 5. СХЕМА (SVG) ---------------------------------------------------- */
 .stage {
   position: relative;
-  min-width: 0;
-  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(10px, 1.6vw, 24px);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(10px, 1.6vw, 22px);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border: var(--hair) solid var(--line);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -135,103 +211,209 @@ button {
   max-height: 100%;
 }
 
-/* Неинтерактивный кузов — тонкие линии */
-#body .car__outline,
-#body .car__arch,
-#body .car__glass,
-#body .car__sill,
-#body .car__ground {
+/* Все цвета чертёжных линий задаёт CSS; в разметке только геометрия. */
+.car__legend,
+.car__outline,
+.car__sill,
+.car__glass,
+.car__arch,
+.car__tyre,
+.car__detail,
+.car__ground,
+.car__datum {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-#body .car__outline { stroke: var(--muted); stroke-width: 1.6; opacity: .7; }
-#body .car__arch    { stroke: var(--muted); stroke-width: 1.4; opacity: .55; }
-#body .car__glass   { stroke: var(--muted); stroke-width: 1.2; opacity: .4; }
-#body .car__sill    { stroke: var(--muted); stroke-width: 1.2; opacity: .38; }
-#body .car__ground  { stroke: var(--line); stroke-width: 1.5; }
+.car__legend { pointer-events: none; }
 
-/* Интерактивные модули.
-   Механизм подсветки: сама группа не красится (fill на g не работает для
-   потомков), а цвет задаётся CSS-переменной --module-fill, которую читает
-   невидимая hit-фигура .car__hit. В покое переменная = transparent, поэтому
-   зона клика невидима; на hover — мягкий серый; на .active — коралловый. */
-g.car__module {
-  --module-fill: transparent;
-  cursor: pointer;
+/* Опорная плоскость и штриховка */
+.car__ground {
   stroke: var(--line);
-  transition: fill .22s ease, stroke .22s ease, transform .22s ease;
-  transform-box: fill-box;
-  transform-origin: center;
+  stroke-width: 1.2;
+  stroke-dasharray: 8 6;
 }
 
-g.car__module:hover { --module-fill: var(--hover-fill); }
-
-g.car__module.active {
-  --module-fill: var(--accent-soft);
-  stroke: var(--accent);
+/* Осевая и размерные линии */
+.car__datum {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+  opacity: .7;
 }
 
-g.car__module:focus-visible {
-  outline: 2px solid var(--accent);   /* системный фокус, не гасим его */
-  outline-offset: 3px;
-  stroke: var(--accent);
-  stroke-dasharray: 4 3;
+/* Силуэт, подштамповка, линии разреза */
+.car__outline {
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  opacity: .8;
 }
 
-/* Зона клика: всегда кликабельна, цвет берёт из --module-fill группы.
-   fill-opacity: 1 — при transparent покой остаётся полностью невидимым,
-   но при hover/.active красится (работает и для path fill-rule="evenodd"
-   у колёс — «кольцо» с дыркой, и для circle у тормозов). */
+/* Порог, обтекатели, диффузор */
+.car__sill {
+  stroke: var(--muted);
+  stroke-width: 1.3;
+  opacity: .45;
+}
+
+/* Остекление */
+.car__glass {
+  stroke: var(--muted);
+  stroke-width: 1.2;
+  opacity: .4;
+}
+
+/* Колёсные арки */
+.car__arch {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  opacity: .6;
+}
+
+/* Колёса: покрышка — толстая, диск — тонкий */
+.car__tyre {
+  stroke: var(--muted);
+  opacity: .55;
+}
+
+.car__tyre > circle:first-child { stroke-width: 4.5; }   /* покрышка R=70 */
+.car__tyre > circle:nth-child(3) { stroke-width: 1.5; }  /* диск R=44 */
+.car__tyre > circle:not(:first-child):not(:nth-child(3)) { stroke-width: .9; }
+.car__tyre > path,
+.car__tyre > rect { stroke-width: .8; }
+
+/* Мелочь: ручка, зеркало, воздухозабор, выхлоп, лючок, скрытые линии */
+.car__detail {
+  stroke: var(--muted);
+  stroke-width: 1.1;
+  opacity: .5;
+}
+
+/* ---- Интерактивные зоны ---- */
+.car__zone {
+  --zone-fill: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Заливка хитбокса живёт на .car__hit: fill на <g> не каскадирует. */
 .car__hit {
-  fill: var(--module-fill, transparent);
+  fill: var(--zone-fill, transparent);
   fill-opacity: 1;
   stroke: none;
   pointer-events: all;
-  transition: fill .22s ease;
+  transition: fill .22s var(--ease);
 }
 
-/* Видимая графика модуля */
-.car__module .car__part {
-  fill: none;
+.car__zone:hover { --zone-fill: var(--hover-fill); }
+
+.car__zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Переходы вешаем на потомков группы, а не на саму <g>. */
+.car__zone .car__part,
+.car__zone .car__tag {
+  transition: stroke .22s var(--ease), opacity .22s var(--ease), fill .22s var(--ease);
+}
+
+.car__zone .car__part {
   stroke: var(--muted);
-  stroke-width: 1.6;
+  fill: none;
+  stroke-width: 1.4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: stroke .22s ease;
+  opacity: .72;
 }
 
-.car__module:hover .car__part { stroke: var(--text); }
-.car__module.active .car__part { stroke: var(--accent); }
-.car__module:focus-visible .car__part { stroke: var(--accent); }
+.car__zone:hover .car__part {
+  stroke: var(--text);
+  opacity: 1;
+}
 
-#wheels .car__part circle { stroke-width: 1.6; }
-#wheels .car__part > circle:nth-child(-n+2) { stroke-width: 5; } /* покрышка */
+/* Активная зона: JS ставит и .active, и .is-active */
+.car__zone.is-active,
+.car__zone.active { --zone-fill: var(--accent-soft); }
 
+.car__zone.is-active .car__part,
+.car__zone.active .car__part {
+  stroke: var(--accent);
+  opacity: 1;
+}
+
+/* Подписи зон */
+.car__tag {
+  font-family: Inter, Roboto, "Segoe UI", system-ui, sans-serif;
+  font-size: 9px;
+  letter-spacing: .12em;
+  fill: var(--muted);
+  stroke: none;
+  opacity: .65;
+}
+
+.car__zone:hover .car__tag { opacity: .9; }
+
+.car__zone.is-active .car__tag,
+.car__zone.active .car__tag {
+  fill: var(--accent);
+  opacity: 1;
+}
+
+/* Подсказка под чертежом */
 .stage__hint {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: clamp(8px, 1.4vh, 16px);
-  text-align: center;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
   font-size: 11px;
-  letter-spacing: .04em;
   color: var(--muted);
-  opacity: .7;
+  opacity: .65;
+  white-space: nowrap;
   pointer-events: none;
 }
 
-/* 5. ПАНЕЛЬ --------------------------------------------------------- */
+/* Легенда нумерации зон: чисто презентационная, слева сверху */
+.stage__legend {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  max-width: calc(100% - 28px);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: .75;
+  pointer-events: none;
+}
+
+.stage__legend-key {
+  color: var(--accent);
+  opacity: .8;
+  letter-spacing: .08em;
+}
+
+/* 6. ПАНЕЛЬ: КАРКАС ------------------------------------------------ */
 .panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  background: var(--surface);
+  border: var(--hair) solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
-/* На десктопе шапка аккордеона скрыта */
-.panel__head { display: none; flex: none; }
+/* Шапка-аккордеон нужна только на мобильном */
+.panel__head { display: none; }
 
 .accordion-toggle {
   width: 100%;
@@ -239,248 +421,608 @@ g.car__module:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  letter-spacing: .08em;
+  padding: 11px 14px;
+  font-size: 10px;
+  letter-spacing: .14em;
   text-transform: uppercase;
+  color: var(--muted);
+  transition: color .2s var(--ease);
 }
 
-.accordion-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.accordion-toggle:hover { color: var(--text); }
+
+.accordion-toggle__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Стрелка-шеврон */
 .accordion-toggle__icon {
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid var(--muted);
-  border-bottom: 1.5px solid var(--muted);
-  transform: rotate(45deg);
-  transition: transform .25s ease;
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-right: 1.4px solid currentColor;
+  border-bottom: 1.4px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform .25s var(--ease);
 }
 
-.accordion-toggle[aria-expanded="false"] .accordion-toggle__icon {
-  transform: rotate(-135deg);
+#accordionToggle[aria-expanded="false"] .accordion-toggle__icon {
+  transform: rotate(-45deg) translate(-3px, -3px);
 }
 
+/* Тело панели: вкладки + панели забирают гибкую высоту,
+   предупреждения/метрики/итог — auto. */
 .panel__body {
-  flex: 1;
-  min-height: 0;
   display: grid;
-  /* первая строка тянется, остальные — по содержимому: страховка от переполнения */
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  gap: clamp(10px, 1.6vh, 18px);
+  grid-template-rows: minmax(0, 1fr) auto auto auto auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 12px 14px 14px;
+  gap: 0;
   overflow: hidden;
 }
 
-/* --- карточки модулей --- */
-.modules {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
-  gap: clamp(6px, 1vh, 12px);
+/* Свернутое состояние на мобильном (JS дублирует его атрибутом hidden) */
+.panel__body[hidden] { display: none; }
+
+.panel__head:has(#accordionToggle[aria-expanded="false"]) + .panel__body {
+  display: none;
 }
 
-.module {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--line);
-  border-radius: 12px;
-  transition: border-color .2s ease, background-color .2s ease;
+/* 7. ПАНЕЛЬ: ВКЛАДКИ ------------------------------------------------ */
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  flex: none;
+  border-bottom: var(--hair) solid var(--line);
 }
 
-.module.active {
-  border-color: var(--accent-soft);
-  border-left-color: var(--accent);
-}
-
-.module__title {
-  font-size: 12px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  transition: color .2s ease;
-}
-
-.module.active .module__title { color: var(--text); }
-
-.module__options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+.tab {
+  flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  position: relative;
+  padding: 8px 6px 9px;
+  margin-bottom: -1px;              /* встаём на нижнюю линейку */
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  text-align: left;
+  transition: color .2s var(--ease), border-color .2s var(--ease);
 }
 
-/* --- кнопки вариантов (рисует JS) --- */
-.option {
-  min-width: 0;
-  padding: 8px 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
+.tab:hover { color: var(--text); }
+
+.tab__index {
+  font-size: 9px;
+  letter-spacing: .1em;
+  opacity: .7;
+  transition: color .2s var(--ease), opacity .2s var(--ease);
+}
+
+.tab__label {
+  display: block;
+  max-width: 100%;
+  font-size: 11px;
+  letter-spacing: .04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
 }
 
-.option:hover {
+.tab.is-active { color: var(--text); }
+.tab.is-active .tab__index { color: var(--accent); opacity: 1; }
+.tab.is-active { border-bottom-color: var(--accent); }
+
+/* 8. ПАНЕЛЬ: ПАНЕЛИ УЗЛОВ ------------------------------------------ */
+/* Контейнер панелей. Именно grid, а не block: иначе .pane (height:auto)
+   перерастает строку, и его overflow-y:auto не срабатывает — контент
+   панели с 4 деталями просто обрезался бы по overflow:hidden. */
+.panes {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  padding-bottom: 18px;             /* запас под нижнее затухание маски */
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) var(--line);
+  -webkit-mask-image: linear-gradient(to bottom, var(--mask) 0, var(--mask) calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, var(--mask) 0, var(--mask) calc(100% - 18px), transparent 100%);
+  animation: paneIn .26s var(--ease) both;
+}
+
+.pane::-webkit-scrollbar { width: 3px; }
+.pane::-webkit-scrollbar-track { background: var(--line); }
+.pane::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+@keyframes paneIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.pane[hidden] { display: none; }
+
+.pane__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: var(--hair) solid var(--line);
+}
+
+.pane__index {
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--accent);
+}
+
+.pane__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pane__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  color: var(--text);
+}
+
+.pane__hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pane__parts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 9. ПАНЕЛЬ: ДЕТАЛИ И ОПЦИИ ---------------------------------------- */
+.part {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  background: var(--surface-2);
+  border: var(--hair) solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color .2s var(--ease), background-color .2s var(--ease);
+}
+
+.part:hover { border-color: var(--muted); }
+
+/* У детали, снятой со стока, — тонкий акцентный кант слева */
+.part:not(.is-stock) { border-left: 2px solid var(--accent); }
+
+.part__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.part__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.part__label {
+  font-size: 12px;
+  letter-spacing: .02em;
+  color: var(--text);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.part__delta {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.part__spec {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  opacity: .75;
+}
+
+.part__options {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  flex: none;
+}
+
+.opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 62px;
+  padding: 6px 9px;
+  border: var(--hair) solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  transition: color .2s var(--ease), border-color .2s var(--ease), background-color .2s var(--ease);
+}
+
+.opt__label {
+  font-size: 10.5px;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.opt__price {
+  font-size: 9.5px;
+  opacity: .65;
+  white-space: nowrap;
+}
+
+.opt:hover {
   border-color: var(--muted);
   color: var(--text);
 }
 
-.option.is-active {
+.opt.is-active {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-soft);
 }
 
-.option:focus-visible {
+.opt:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* --- характеристики: очень тонкие линии --- */
-.stats {
-  flex: none;
-  display: grid;
-  gap: clamp(6px, 1vh, 10px);
-}
-
-.stat {
-  display: grid;
-  gap: 5px;
-}
-
-.stat__head {
+/* 10. ПАНЕЛЬ: ПРЕДУПРЕЖДЕНИЯ ---------------------------------------- */
+.warnings {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+  padding: 10px 0;
 }
 
-.stat__label {
-  font-size: 11px;
-  letter-spacing: .08em;
+/* Когда конфликты есть — акцентный рельс слева на весь блок */
+.warnings.is-alert {
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+}
+
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  background: var(--accent-wash);
+  border: var(--hair) solid var(--accent-line);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-xs);
+}
+
+.warning__chip {
+  font-size: 10.5px;
+  letter-spacing: .04em;
   text-transform: uppercase;
+  color: var(--accent);
+}
+
+.warning__detail {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.35;
   color: var(--muted);
 }
 
-.stat__value {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
+.warnings__ok {
+  padding: 4px 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: .6;
 }
 
-.stat__track {
-  height: 2px;
-  background: var(--line);
-  border-radius: 2px;
+/* 11. ПАНЕЛЬ: МЕТРИКИ ---------------------------------------------- */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  flex: none;
+  padding: 2px 0 12px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.metric__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Подпись метрики — flex-строка из двух сжимаемых пунктов: текста и
+   .metric__note. Сам .metric__label блоком не является, поэтому многоточие
+   вешаем на .metric__label-text (flex-Items блокифицируются, и
+   text-overflow к ним применяется). */
+.metric__label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 9.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
   overflow: hidden;
 }
 
-.stat__bar {
-  height: 100%;
-  width: 0;                       /* ширину ставит JS */
-  background: var(--accent);
-  transition: width .45s cubic-bezier(.4, 0, .2, 1);
+.metric__label-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* --- итог --- */
+/* Хвост-пояснение («растёт с выбором») — отдельный flex-пункт: сжимается
+   вплоть до многоточия и не выталкивает подпись из колонки. */
+.metric__note {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: .55;
+}
+
+/* Значение и единица сжиматься не должны: полоса head'а растягивает их вправо
+   по justify-content: space-between даже при длинной подписи. */
+.metric__value {
+  flex: none;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.metric__unit {
+  flex: none;
+  margin-left: 3px;
+  font-size: 9.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Скрипт вешает is-good / is-bad на .metric__fill, а не на строку,
+   поэтому цвет значения подтягиваем через :has(). */
+.metric:has(.metric__fill.is-good) .metric__value { color: var(--good); }
+.metric:has(.metric__fill.is-bad) .metric__value { color: var(--bad); }
+
+.metric__track {
+  position: relative;               /* обязательно: призрак абсолютен внутри */
+  height: 3px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.metric__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--muted);
+  transition: width .45s var(--ease), background-color .25s var(--ease);
+}
+
+.metric__fill.is-good { background: var(--good); }
+.metric__fill.is-bad { background: var(--bad); }
+
+.metric.has-ghost .metric__track {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .04);
+}
+
+/* Призрачный маркер «куда уедет значение», если нажать опцию */
+.metric__ghost {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--good);
+  color: var(--good);
+  transform: translateX(-1px);
+  box-shadow: 0 0 6px currentColor;
+  transition: left .3s var(--ease), opacity .2s var(--ease);
+  animation: ghostPulse 1.4s ease-in-out infinite;
+}
+
+.metric__ghost--good { background: var(--good); color: var(--good); }
+
+.metric__ghost--bad { background: var(--bad); color: var(--bad); }
+
+@keyframes ghostPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
+
+/* 12. ПАНЕЛЬ: ИТОГ ------------------------------------------------- */
 .summary {
   flex: none;
+  border-top: var(--hair) solid var(--line);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+
+.summary__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary__cell {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: clamp(6px, 1vh, 12px);
-  border-top: 1px solid var(--line);
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .summary__label {
-  font-size: 11px;
-  letter-spacing: .14em;
+  font-size: 9px;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .summary__value {
-  font-size: clamp(18px, 2.2vw, 24px);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 6. МОБИЛЬНЫЙ БРЕЙКПОИНТ < 900px ----------------------------------- */
+/* Бюджет — визуальный якорь итога */
+.summary__cell:first-child .summary__value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+#totalPrice { font-size: 16px; }
+
+/* 13. АККОРДЕОН И БРЕЙКПОИНТЫ -------------------------------------- */
+/* 900px — ровно тот порог, который app.js спрашивает у matchMedia в
+   isNarrowViewport(); при 899px рассинхрон давал вьюпорт 900px, где CSS
+   уже десктоп (кнопка аккордеона скрыта), а JS ещё считал мобильным и
+   мог оставить #panelBody скрытым без возможности раскрыть. */
 @media (max-width: 900px) {
+  /* Одна колонка: чертёж сверху, панель снизу */
   .app__body {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);
   }
 
-  .stage { padding: 8px; }
-  .stage__hint { bottom: 6px; font-size: 10px; }
-
-  /* Шапка аккордеона появляется только здесь */
-  .panel__head { display: block; }
-
-  /* Свёрнутое состояние: кнопка переключает aria-expanded */
-  .panel__head:has(#accordionToggle[aria-expanded="false"]) + .panel__body,
-  .panel__body[hidden] {
-    display: none;
+  .panel__head {
+    display: block;
+    flex: none;
+    border-bottom: var(--hair) solid var(--line);
   }
 
-  /* Осознанное исключение из «без скролла»: на 360×640
-     4 карточки + 4 метрики физически не влезают — нужен внутренний скролл */
+  /* На мобильном скроллит внешний контейнер — внутренние не трогаем */
   .panel__body {
+    grid-template-rows: auto auto auto auto auto;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
-  /* Строки по содержимому: minmax(0, auto) позволял карточке сжаться
-     ниже высоты кнопок, и кнопки вариантов наезжали на следующую
-     карточку (на 360×640 карточка была 32.9px при кнопке 33.4px). */
-  .modules {
-    grid-template-rows: none;
-    grid-auto-rows: min-content;
+  /* Строка панели отдаёт высоту контенту, иначе минимальная высота
+     строки в .panes (minmax(0,1fr)) снова сжала бы внутренний скролл. */
+  .panes {
+    grid-template-rows: auto;
+    overflow: visible;
   }
 
-  /* min-height: min-content перекрывает десктопное `.module { min-height: 0 }`,
-     поэтому высота карточки всегда покрывает содержимое. */
-  .module {
-    grid-template-columns: 88px minmax(0, 1fr);
-    min-height: min-content;
+  .pane {
+    overflow: visible;
+    padding-right: 0;
+    padding-bottom: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
-/* Очень узкие экраны */
-@media (max-width: 420px) {
-  .brand { font-size: 10px; letter-spacing: .1em; }
-  .module { grid-template-columns: 74px minmax(0, 1fr); }
-  .option { font-size: 11px; padding: 8px 4px; }
+/* Узкая колонка метрик — в одну строку */
+@media (max-width: 419px) {
+  .metrics { grid-template-columns: minmax(0, 1fr); }
+  .summary__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* 7. ПРОДВИЖЕНИЕ ОТКЛЮЧЕНО ----------------------------------------- */
+@media (max-width: 759px) {
+  .header-readout { display: none; }
+}
+
+/* Плотнее вкладки на узких экранах */
+@media (max-width: 619px) {
+  .tab__label { font-size: 9.5px; }
+  .tab { padding: 7px 4px 8px; }
+}
+
+@media (max-width: 559px) {
+  /* Легенда схемы уходит, чтобы не спорить с подсказкой */
+  .stage__legend { display: none; }
+  .stage__hint { white-space: normal; text-align: center; }
+}
+
+/* Очень низкие экраны — прячем подсказку */
+@media (max-height: 520px) {
+  .stage__hint { display: none; }
+}
+
+/* 14. ДОСТУПНОСТЬ И ДВИЖЕНИЕ --------------------------------------- */
+@media (prefers-contrast: more) {
+  :root {
+    --line: #3d3d44;
+    --muted: #a9a9b2;
+  }
+
+  .metric__fill { background: var(--text); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    transition-duration: .01ms !important;
     animation-duration: .01ms !important;
-    transition-delay: 0s !important;
     animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
   }
+
+  .pane {
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-bottom: 0;
+  }
+
+  .metric__ghost { animation: none; opacity: 1; }
 }
